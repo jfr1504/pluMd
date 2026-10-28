@@ -1,8 +1,8 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, clipboard, nativeImage, protocol, net } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, clipboard, ClipboardItem, nativeImage, protocol, net } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { createFsOps } = require('./fsops');
-const { MD_RE, createAccess, writeAtomic, savePastedImage } = require('./acceso');
+const { MD_RE, DENIED, createAccess, writeAtomic, savePastedImage, resolveImagePath } = require('./acceso');
 const { readClipboardPng } = require('./portapapeles');
 const { createPlugins, registerScheme } = require('./plugins');
 
@@ -149,8 +149,12 @@ ipcMain.handle('fs:create', guard((dir, name) => ops.create(dir, name)));
 ipcMain.handle('fs:rename', guard((p, name) => ops.rename(p, name)));
 ipcMain.handle('fs:copy', guard((src, dir) => ops.copy(src, dir)));
 ipcMain.handle('fs:delete', guard((p, permanent) => ops.remove(p, { permanent: permanent === true })));
+ipcMain.handle('fs:mkdir', guard((dir, name) => ops.createDir(dir, name)));
+ipcMain.handle('fs:checkDir', guard((p) => ops.canRemoveDir(p)));
+ipcMain.handle('fs:deleteDir', guard((p) => ops.removeDir(p)));
+// Mostrar en el Explorador: documentos de la carpeta abierta o que el usuario eligió (pestañas abiertas).
 ipcMain.handle('fs:reveal', async (_e, p) => {
-  if (await ops.contains(p)) shell.showItemInFolder(p);
+  if ((await ops.contains(p)) || (await access.fileAllowed(p))) shell.showItemInFolder(p);
 });
 
 // ---- IPC: ficheros ----
@@ -162,7 +166,7 @@ async function mayUse(file) {
   if (await access.fileAllowed(file)) return true;
   return MD_RE.test(file) && (await ops.contains(file));
 }
-const denied = () => new Error('Acceso no autorizado a ese fichero.');
+const denied = () => new Error(DENIED);
 
 ipcMain.handle('file:read', async (_e, file) => {
   if (!(await mayUse(file))) throw denied();
@@ -257,6 +261,20 @@ ipcMain.handle('image:pasteClipboard', async (_e, docPath) => {
   if (!png) return { ok: false };
   return { ok: true, ...(await savePastedImage(docPath, png)) };
 });
+// Imágenes del documento (menú contextual): la ruta se resuelve a partir de lo escrito en el vínculo (acceso.js)
+// y solo se copia al portapapeles o se muestra en el Explorador: nunca se abre ni se ejecuta.
+const localImagePath = (docPath, src) => resolveImagePath(docPath, src, mayUse);
+ipcMain.handle('image:copy', guard(async (docPath, src) => {
+  const img = nativeImage.createFromPath(await localImagePath(docPath, src));
+  if (img.isEmpty()) return { ok: false, error: 'No se pudo leer la imagen (los SVG no se pueden copiar como imagen).' };
+  // Desde Electron 45 el portapapeles es asíncrono y ya no existe writeImage().
+  await clipboard.write([new ClipboardItem({ 'image/png': new Blob([img.toPNG()], { type: 'image/png' }) })]);
+  return { ok: true };
+}));
+ipcMain.handle('image:reveal', guard(async (docPath, src) => {
+  shell.showItemInFolder(await localImagePath(docPath, src));
+  return { ok: true };
+}));
 ipcMain.handle('clipboard:read', () => clipboard.readText());
 ipcMain.handle('clipboard:write', (_e, text) => clipboard.writeText(String(text)));
 

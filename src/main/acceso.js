@@ -79,6 +79,27 @@ async function savePastedImage(docPath, png, now = new Date()) {
   throw new Error('Demasiadas imágenes con el mismo nombre en el mismo minuto.');
 }
 
+const IMG_RE = /\.(png|jpe?g|gif|bmp|webp|svg|ico)$/i;
+const DENIED = 'Acceso no autorizado a ese fichero.';
+
+// Ruta real de una imagen que un documento enseña, a partir de lo escrito en su vínculo: file://, ruta absoluta o
+// relativa al documento. Siempre exige que el documento esté autorizado (`isAuthorized`), sea cual sea la forma
+// de la ruta. Solo imágenes locales: las remotas no pasan por aquí.
+async function resolveImagePath(docPath, src, isAuthorized) {
+  if (typeof src !== 'string' || !src || /^(https?|data):/i.test(src)) throw new Error('Solo se pueden usar imágenes guardadas en este equipo.');
+  if (!(await isAuthorized(docPath))) throw new Error(DENIED);
+  let p;
+  if (/^file:/i.test(src)) p = require('url').fileURLToPath(src);
+  else if (/^[a-zA-Z]:[\\/]/.test(src) || src.startsWith('\\\\')) p = src;
+  else {
+    let rel = src;
+    try { rel = decodeURI(src); } catch { /* se usa tal cual */ }
+    p = path.resolve(path.dirname(docPath), rel);
+  }
+  if (!IMG_RE.test(p) || !(await fs.promises.stat(p)).isFile()) throw new Error('No se encontró el fichero de imagen.');
+  return p;
+}
+
 const MAX_ROOTS = 20;
 
 // Carpetas y ficheros autorizados. Las carpetas elegidas se recuerdan entre sesiones (el panel reabre la última).
@@ -137,4 +158,4 @@ function createAccess({ storeFile = null } = {}) {
   };
 }
 
-module.exports = { MD_RE, key, within, realPath, writeAtomic, savePastedImage, createAccess };
+module.exports = { MD_RE, DENIED, key, within, realPath, writeAtomic, savePastedImage, resolveImagePath, createAccess };

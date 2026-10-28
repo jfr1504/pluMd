@@ -4,7 +4,9 @@ import { defaultKeymap, history, historyKeymap, undo, redo, selectAll } from '@c
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { searchKeymap, openSearchPanel } from '@codemirror/search';
 import { livePreview, skipHiddenForward } from './livePreview.js';
-import { tableField } from './tables.js';
+import { tableField, tableCellAt } from './tables.js';
+import { showMenu } from './contextmenu.js';
+import { editorMenuItems, tableMenuItems, pluginItems } from './editorMenu.js';
 import { codeLanguages, codeHighlight } from './highlight.js';
 import { headingFolding, foldKeymap, foldAllHeadings, expandAll } from './folding.js';
 import { setScope } from './colors.js';
@@ -326,9 +328,10 @@ function newDoc() {
   activate(d);
 }
 
+// Devuelve false si el usuario decidió no cerrar un documento con cambios sin guardar.
 function closeDoc(d) {
-  if (!d) return;
-  if (d.dirty && !confirm(`«${docName(d)}» tiene cambios sin guardar. ¿Cerrar sin guardar?`)) return;
+  if (!d) return true;
+  if (d.dirty && !confirm(`«${docName(d)}» tiene cambios sin guardar. ¿Cerrar sin guardar?`)) return false;
   const i = docs.indexOf(d);
   docs.splice(i, 1);
   emit('document:closed', { path: d.file || null });
@@ -341,10 +344,16 @@ function closeDoc(d) {
     updateTitle();
     explorer?.setActive(null);
     ribbon?.update(formatState(view.state));
-    return;
+    return true;
   }
   if (d === cur) activate(docs[Math.min(i, docs.length - 1)]);
   else renderTabs();
+  return true;
+}
+
+// Cierra varios documentos en orden; se detiene si el usuario cancela uno con cambios sin guardar.
+function closeDocs(list) {
+  for (const d of list) if (!closeDoc(d)) return;
 }
 
 async function openFile(path) {
@@ -553,6 +562,9 @@ ribbon.update(formatState(view.state));
 
 // ---- Panel de carpetas ----
 const sameFile = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+// ¿El fichero está dentro de esa carpeta (a cualquier profundidad)?
+const winKey = (p) => p.replace(/\//g, '\\').toLowerCase();
+const insideDir = (file, dir) => !!file && !!dir && winKey(file).startsWith(winKey(dir).replace(/\\+$/, '') + '\\');
 let bannerTimer = null;
 function toast(text, sticky = false) {
   showBanner(text, [], sticky);
@@ -574,26 +586,79 @@ explorer = createExplorer({
     renderTabs();
     updateTitle();
   },
-  // Un documento enviado a la Papelera deja su pestaña abierta como documento sin guardar,
-  // para no perder el texto si fue un error (con Guardar como se recupera).
-  onDeleted: (p) => {
+  // Un documento enviado a la Papelera (solo o dentro de una carpeta) deja su pestaña abierta como documento
+  // sin guardar, para no perder el texto si fue un error (con Guardar como se recupera).
+  onDeleted: (p, isDir) => {
+    let hit = 0;
     for (const d of docs) {
-      if (!sameFile(d.file, p)) continue;
+      if (!(isDir ? insideDir(d.file, p) : sameFile(d.file, p))) continue;
       d.file = null;
       d.mtimeMs = null;
       d.dirty = true;
       d.untitled = ++untitledCount;
+      hit++;
     }
     renderTabs();
     updateTitle();
-    toast('El documento se movió a la Papelera. Su pestaña sigue abierta como documento sin guardar.');
+    const what = isDir ? 'La carpeta' : 'El documento';
+    toast(hit
+      ? `${what} se movió a la Papelera. ${hit > 1 ? 'Sus pestañas siguen abiertas como documentos sin guardar.' : 'Su pestaña sigue abierta como documento sin guardar.'}`
+      : `${what} se movió a la Papelera.`);
   },
-  isOpenDirty: (p) => docs.some((d) => d.dirty && sameFile(d.file, p)),
+  isOpenDirty: (p, isDir) => docs.some((d) => d.dirty && (isDir ? insideDir(d.file, p) : sameFile(d.file, p))),
   confirm: confirmBox,
   notify: toast,
   onVisibility: (v) => ribbon.setActive({ sidebar: v }),
 });
 explorer.restore();
+
+// ---- Menú contextual (botón derecho) del editor, las tablas y las pestañas ----
+// El dibujo del menú está en contextmenu.js y sus opciones en editorMenu.js; aquí solo se conecta con la aplicación.
+const menuDeps = () => ({
+  view,
+  run: (id, arg) => executeCommand(id, arg).catch((e) => console.error(e)),
+  openLink,
+  docPath: () => (cur && cur.file) || null,
+  notify: (text) => toast(text),
+  copyText: (text) => window.api.clipboardWrite(text),
+});
+
+$('editor').addEventListener('contextmenu', (e) => {
+  if (!cur) return;
+  e.preventDefault();
+  const d = menuDeps();
+  const cell = tableCellAt(e.target);
+  if (cell) return showMenu(e.clientX, e.clientY, tableMenuItems(d, cell));
+  // Como en cualquier editor: el botón derecho fuera de la selección lleva el cursor al punto pulsado.
+  // Sobre una imagen no se toca: al pulsar ya quedó seleccionada entera (y su mitad derecha cae fuera de ella).
+  const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }, false);
+  const sel = view.state.selection.main;
+  if (pos != null && !e.target.closest('.cm-lp-img') && (sel.empty || pos < sel.from || pos > sel.to)) view.dispatch({ selection: { anchor: pos } });
+  showMenu(e.clientX, e.clientY, editorMenuItems({ ...d, pos }));
+}, true);
+
+function tabMenuItems(d, i) {
+  const unsaved = d.file ? undefined : 'El documento aún no está guardado.';
+  const items = [
+    { label: 'Cerrar', icon: 'close', key: 'Ctrl+W', run: () => closeDoc(d) },
+    { label: 'Cerrar las demás', disabled: docs.length < 2, run: () => { activate(d); closeDocs(docs.filter((x) => x !== d)); } },
+    { label: 'Cerrar a la derecha', disabled: i === docs.length - 1, run: () => closeDocs(docs.slice(i + 1)) },
+    { label: 'Cerrar todas', run: () => closeDocs([...docs]) },
+    '-',
+    { label: 'Copiar ruta', icon: 'copy', disabled: !d.file, title: unsaved, run: () => { window.api.clipboardWrite(d.file); toast('Ruta copiada.'); } },
+    { label: 'Mostrar en el Explorador de Windows', icon: 'reveal', disabled: !d.file, title: unsaved, run: () => window.api.reveal(d.file) },
+  ];
+  const extra = pluginItems(['tab'], { path: d.file || null });
+  return extra.length ? [...items, '-', ...extra] : items;
+}
+
+$('doctabs').addEventListener('contextmenu', (e) => {
+  const tab = e.target.closest('.dtab');
+  if (!tab) return;
+  e.preventDefault();
+  const i = [...$('doctabs').querySelectorAll('.dtab')].indexOf(tab);
+  if (docs[i]) showMenu(e.clientX, e.clientY, tabMenuItems(docs[i], i));
+});
 
 // Lo que la aplicación ofrece a los plugins (ver src/renderer/plugins/api.js).
 const pluginHost = {

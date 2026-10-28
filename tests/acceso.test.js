@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { realPath, writeAtomic, savePastedImage, createAccess, within, key } = require('../src/main/acceso');
+const { realPath, writeAtomic, savePastedImage, resolveImagePath, createAccess, within, key, DENIED } = require('../src/main/acceso');
+const { pathToFileURL } = require('url');
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'plumd-test-'));
 const rm = (d) => fs.rmSync(d, { recursive: true, force: true });
@@ -128,5 +129,57 @@ test('savePastedImage rechaza una carpeta «imagenes» que sea un enlace hacia f
     assert.deepEqual(fs.readdirSync(path.join(d, 'fuera')), []);
   } finally {
     rm(d);
+  }
+});
+
+// Documento con una imagen al lado y otra en una carpeta con espacios; `autorizados` son los documentos permitidos.
+function imagenes() {
+  const d = tmp();
+  const doc = path.join(d, 'nota.md');
+  fs.mkdirSync(path.join(d, 'mis fotos'));
+  fs.writeFileSync(doc, '# x');
+  fs.writeFileSync(path.join(d, 'a.png'), 'png');
+  fs.writeFileSync(path.join(d, 'mis fotos', 'b.jpg'), 'jpg');
+  fs.writeFileSync(path.join(d, 'script.js'), 'no es una imagen');
+  const autorizados = (...docs) => async (f) => docs.includes(f);
+  return { d, doc, autorizados };
+}
+
+test('resolveImagePath resuelve rutas relativas, absolutas y file:// de un documento autorizado', async () => {
+  const t = imagenes();
+  try {
+    const ok = t.autorizados(t.doc);
+    assert.equal(await resolveImagePath(t.doc, 'a.png', ok), path.join(t.d, 'a.png'));
+    assert.equal(await resolveImagePath(t.doc, 'mis%20fotos/b.jpg', ok), path.join(t.d, 'mis fotos', 'b.jpg'));
+    assert.equal(await resolveImagePath(t.doc, path.join(t.d, 'a.png'), ok), path.join(t.d, 'a.png'));
+    assert.equal(await resolveImagePath(t.doc, pathToFileURL(path.join(t.d, 'a.png')).href, ok), path.join(t.d, 'a.png'));
+  } finally {
+    rm(t.d);
+  }
+});
+
+test('resolveImagePath exige un documento autorizado también con rutas absolutas y file://', async () => {
+  const t = imagenes();
+  try {
+    const nadie = t.autorizados();
+    const abs = path.join(t.d, 'a.png');
+    for (const src of ['a.png', abs, pathToFileURL(abs).href]) {
+      await assert.rejects(() => resolveImagePath(t.doc, src, nadie), { message: DENIED }, src);
+    }
+    await assert.rejects(() => resolveImagePath(null, abs, t.autorizados(t.doc)), { message: DENIED }, 'documento sin guardar');
+  } finally {
+    rm(t.d);
+  }
+});
+
+test('resolveImagePath solo admite imágenes locales que existan', async () => {
+  const t = imagenes();
+  try {
+    const ok = t.autorizados(t.doc);
+    for (const src of ['https://example.com/a.png', 'http://example.com/a.png', 'data:image/png;base64,AAAA', '', 'no-existe.png', 'script.js', 'mis fotos']) {
+      await assert.rejects(() => resolveImagePath(t.doc, src, ok), Error, `debería rechazar «${src}»`);
+    }
+  } finally {
+    rm(t.d);
   }
 });

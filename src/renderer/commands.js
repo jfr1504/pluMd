@@ -392,6 +392,35 @@ export function insertCodeBlock(view, lang = '') {
   view.focus();
 }
 
+// Bloque de código ``` que contiene `pos`: { from, to, lang, infoFrom, infoTo, code }. `code` es el contenido sin las vallas.
+export function codeBlockAt(state, pos) {
+  for (let n = syntaxTree(state).resolveInner(pos, -1); n; n = n.parent) {
+    if (n.name !== 'FencedCode') continue;
+    const open = n.node.getChild('CodeMark');
+    const info = n.node.getChild('CodeInfo');
+    const closed = n.node.getChildren('CodeMark').length >= 2;
+    const first = state.doc.lineAt(n.from).number;
+    const last = state.doc.lineAt(n.to).number;
+    const lines = [];
+    for (let i = first + 1; i <= (closed ? last - 1 : last); i++) lines.push(state.doc.line(i).text);
+    return {
+      from: n.from,
+      to: n.to,
+      lang: info ? state.sliceDoc(info.from, info.to).trim() : '',
+      infoFrom: info ? info.from : open.to,
+      infoTo: info ? info.to : open.to,
+      code: lines.join('\n'),
+    };
+  }
+  return null;
+}
+
+// Cambia el lenguaje de un bloque de código ('' lo deja sin lenguaje).
+export function setCodeLanguage(view, block, lang) {
+  view.dispatch({ changes: { from: block.infoFrom, to: block.infoTo, insert: lang }, userEvent: 'input.format' });
+  view.focus();
+}
+
 // Con el cursor en el último renglón de un bloque de código, salta a un párrafo debajo del bloque.
 export function exitCodeBlock(view, onlyLastLine = false) {
   const { state } = view;

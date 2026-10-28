@@ -24,15 +24,18 @@ function inCode(state, pos) {
   return false;
 }
 
+// Comandos del menú "/": los del núcleo y los de los plugins que tienen título. También los usa el menú contextual.
+export const slashEntries = () => [
+  ...CORE.map(([id, label]) => ({ id, label })),
+  ...items('commands').filter((c) => c.title && c.owner !== 'core').map((c) => ({ id: c.id, label: c.title, plugin: c.owner })),
+];
+
 function source(ctx) {
   const m = ctx.matchBefore(/(?:^|\s)\/[^\s/]*/);
   if (!m) return null;
   const from = m.from + (m.text.startsWith('/') ? 0 : 1);
   if (inCode(ctx.state, from)) return null;
-  const entries = [
-    ...CORE.map(([id, label]) => ({ id, label })),
-    ...items('commands').filter((c) => c.title && c.owner !== 'core').map((c) => ({ id: c.id, label: c.title, plugin: c.owner })),
-  ];
+  const entries = slashEntries();
   return {
     from,
     filter: false,

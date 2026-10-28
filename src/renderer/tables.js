@@ -66,6 +66,50 @@ function renderTable(wrap, view, model, focus) {
     view.requestMeasure();
   };
 
+  // Operaciones sobre la celda activa; las usan los botones de la barra y el menú contextual (wrap._ops).
+  // La fila de cabecera no admite fila encima: la fila nueva siempre queda debajo de ella.
+  const addRow = (above) => {
+    const { r, c } = cur();
+    const at = above ? Math.max(1, r) : r + 1;
+    model.cells.splice(at, 0, Array(cols).fill(''));
+    apply({ r: at, c });
+  };
+  const delRow = () => {
+    const { r, c } = cur();
+    if (r === 0 || model.cells.length <= 2) return;
+    model.cells.splice(r, 1);
+    apply({ r: Math.min(r, model.cells.length - 1), c });
+  };
+  const addCol = (left) => {
+    const { r, c } = cur();
+    const at = left ? c : c + 1;
+    model.cells.forEach((row) => row.splice(at, 0, ''));
+    model.align.splice(at, 0, null);
+    if (model.widths) model.widths.splice(at, 0, Math.round(model.widths.reduce((x, y) => x + y, 0) / model.widths.length));
+    apply({ r, c: at });
+  };
+  const delCol = () => {
+    const { r, c } = cur();
+    if (cols <= 1) return;
+    model.cells.forEach((row) => row.splice(c, 1));
+    model.align.splice(c, 1);
+    if (model.widths) model.widths.splice(c, 1);
+    apply({ r, c: Math.min(c, cols - 2) });
+  };
+  const setAlign = (a) => {
+    const { r, c } = cur();
+    model.align[c] = a;
+    apply({ r, c });
+  };
+  const delTable = () => {
+    const r = tableRange(view, wrap);
+    if (!r) return;
+    const to = Math.min(view.state.doc.length, r.to + 1);
+    view.dispatch({ changes: { from: r.from, to }, userEvent: 'delete.table' });
+    view.focus();
+  };
+  wrap._ops = { addRow, delRow, addCol, delCol, setAlign, delTable };
+
   const tools = el('div', 'tbl-tools');
   const tool = (label, title, fn) => {
     const b = el('button', null, label);
@@ -75,41 +119,11 @@ function renderTable(wrap, view, model, focus) {
     b.addEventListener('click', fn);
     tools.append(b);
   };
-  tool('+ Fila', 'Insertar fila debajo de la celda activa', () => {
-    const { r, c } = cur();
-    const at = r + 1;
-    model.cells.splice(at, 0, Array(cols).fill(''));
-    apply({ r: at, c });
-  });
-  tool('− Fila', 'Eliminar la fila de la celda activa', () => {
-    const { r, c } = cur();
-    if (r === 0 || model.cells.length <= 2) return;
-    model.cells.splice(r, 1);
-    apply({ r: Math.min(r, model.cells.length - 1), c });
-  });
-  tool('+ Columna', 'Insertar columna a la derecha de la celda activa', () => {
-    const { r, c } = cur();
-    const at = c + 1;
-    model.cells.forEach((row) => row.splice(at, 0, ''));
-    model.align.splice(at, 0, null);
-    if (model.widths) model.widths.splice(at, 0, Math.round(model.widths.reduce((x, y) => x + y, 0) / model.widths.length));
-    apply({ r, c: at });
-  });
-  tool('− Columna', 'Eliminar la columna de la celda activa', () => {
-    const { r, c } = cur();
-    if (cols <= 1) return;
-    model.cells.forEach((row) => row.splice(c, 1));
-    model.align.splice(c, 1);
-    if (model.widths) model.widths.splice(c, 1);
-    apply({ r, c: Math.min(c, cols - 2) });
-  });
-  tool('Eliminar tabla', 'Eliminar la tabla entera (se puede deshacer con Ctrl+Z)', () => {
-    const r = tableRange(view, wrap);
-    if (!r) return;
-    const to = Math.min(view.state.doc.length, r.to + 1);
-    view.dispatch({ changes: { from: r.from, to }, userEvent: 'delete.table' });
-    view.focus();
-  });
+  tool('+ Fila', 'Insertar fila debajo de la celda activa', () => addRow(false));
+  tool('− Fila', 'Eliminar la fila de la celda activa', delRow);
+  tool('+ Columna', 'Insertar columna a la derecha de la celda activa', () => addCol(false));
+  tool('− Columna', 'Eliminar la columna de la celda activa', delCol);
+  tool('Eliminar tabla', 'Eliminar la tabla entera (se puede deshacer con Ctrl+Z)', delTable);
   wrap.append(tools);
 
   const table = el('table');
@@ -275,6 +289,22 @@ export const tableField = StateField.define({
     EditorView.atomicRanges.of((view) => view.state.field(f)),
   ],
 });
+
+// Celda de tabla bajo el elemento `target` (clic derecho), o null si no está en una tabla.
+// Deja esa celda como la activa, que es sobre la que actúan las operaciones de `ops`.
+export function tableCellAt(target) {
+  const wrap = target.closest?.('.cm-table-widget');
+  if (!wrap || !wrap._ops || !wrap._model) return null;
+  const td = target.closest('td, th');
+  if (td) {
+    wrap._r = td.parentElement.rowIndex;
+    wrap._c = td.cellIndex;
+  }
+  const r = wrap._r ?? 0;
+  const c = wrap._c ?? 0;
+  const cells = wrap._model.cells;
+  return { ops: wrap._ops, r, c, rows: cells.length, cols: cells[0].length, align: wrap._model.align[c] || null };
+}
 
 // Lleva el foco a la primera celda de la tabla que empieza en `pos`.
 export function focusTableAt(view, pos) {

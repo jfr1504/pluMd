@@ -87,7 +87,8 @@
 :root[data-skin='mac'] #dlg { backdrop-filter: blur(8px); background: rgba(0, 0, 0, .28); }
 :root[data-skin='mac'] .popup { border-color: transparent; }
 :root[data-skin='mac'] button.primary { border-radius: var(--r-m); }
-:root[data-skin='mac'] .menu button:hover { background: var(--accent); color: var(--on-accent); }
+:root[data-skin='mac'] .menu button:hover:not(:disabled),
+:root[data-skin='mac'] .menu button.hot { background: var(--accent); color: var(--on-accent); }
 
 /* Barras de desplazamiento tipo macOS: finas y redondeadas */
 :root[data-skin='mac'] ::-webkit-scrollbar { width: 14px; height: 14px; }

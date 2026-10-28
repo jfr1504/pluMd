@@ -1,5 +1,6 @@
 import { icon } from './icons.js';
 import { contextItems } from './plugins/registry.js';
+import { showMenu } from './contextmenu.js';
 
 // Panel de carpetas: árbol de documentos Markdown con menú contextual.
 // Todas las operaciones de disco pasan por el proceso principal (src/main/fsops.js), que solo actúa
@@ -9,6 +10,8 @@ const store = {
   get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } },
 };
+
+const NOT_FIXED_MSG = 'Solo se pueden borrar carpetas en discos fijos. Bórrala desde el Explorador de Windows.';
 
 const base = (p) => p.split(/[\\/]/).pop();
 const parent = (p) => p.replace(/[\\/][^\\/]*$/, '');
@@ -25,6 +28,7 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
 
   let root = null;
   let rootNet = false;
+  let rootFixed = false;
   let activePath = null;
   let selected = null;
   let clip = null;
@@ -199,6 +203,7 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
     }
     root = r.path;
     rootNet = r.network;
+    rootFixed = r.fixed;
     clip = null;
     selected = null;
     store.set('sb:root', root);
@@ -292,11 +297,11 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
   });
 
   // ---- Entrada de nombre en línea ----
-  function inlineInput({ value, depth, selectBase, submit, cancel }) {
+  function inlineInput({ value, depth, selectBase, submit, cancel, iconName = 'filetext' }) {
     const row = document.createElement('div');
     row.className = 'tn-row editing';
     row.style.paddingLeft = `${8 + depth * 14}px`;
-    row.insertAdjacentHTML('beforeend', `<span class="tn-arrow"></span>${icon('filetext', 15)}`);
+    row.insertAdjacentHTML('beforeend', `<span class="tn-arrow"></span>${icon(iconName, 15)}`);
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'tn-input';
@@ -353,6 +358,36 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
         await refreshDir(dir);
         setActive(r.path);
         onOpen(r.path);
+        return true;
+      },
+    });
+    host.prepend(row);
+  }
+
+  async function newFolder(dirNode) {
+    const dir = dirNode ? dirNode.dataset.path : root;
+    if (!dir) return;
+    let host = tree;
+    let depth = 0;
+    if (dirNode) {
+      await toggle(dirNode, true);
+      host = dirNode.querySelector(':scope > .tn-children');
+      depth = dirNode._depth + 1;
+    }
+    host.querySelector(':scope > .tn-msg')?.remove();
+    const row = inlineInput({
+      value: 'Nueva carpeta',
+      depth,
+      selectBase: false,
+      iconName: 'folder',
+      cancel: () => row.remove(),
+      submit: async (name) => {
+        const r = await window.api.fsMkdir(dir, name);
+        if (!r.ok) { notify(r.error); return false; }
+        row.remove();
+        await refreshDir(dir);
+        const n = nodeFor(r.path);
+        if (n) select(n);
         return true;
       },
     });
@@ -417,9 +452,46 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
     if (n) select(n);
   }
 
+  // Copia el documento en su propia carpeta: fsCopy le pone « - copia» al nombre si ya existe.
+  async function duplicate(node) {
+    const p = node.dataset.path;
+    const r = await window.api.fsCopy(p, parent(p));
+    if (!r.ok) return notify(r.error);
+    await refreshDir(parent(p));
+    notify(`Duplicado como «${base(r.path)}».`);
+    const n = nodeFor(r.path);
+    if (n) select(n);
+  }
+
+  async function copyText(text, what) {
+    await window.api.clipboardWrite(text);
+    notify(`${what} copiado.`);
+  }
+
+  // Una carpeta solo se borra si el proceso principal lo permite (disco fijo y nada que el panel no muestre).
+  // Se consulta antes de pedir la confirmación, para no hacer confirmar algo que luego se rechaza.
+  async function removeFolder(p) {
+    const check = await window.api.fsCheckDir(p);
+    if (!check.ok) return notify(check.error);
+    const warnDirty = isOpenDirty(p, true) ? ' Ojo: hay documentos de esa carpeta con cambios sin guardar en pestañas abiertas.' : '';
+    const ok = await confirm({
+      title: 'Mover carpeta a la Papelera',
+      message: `La carpeta «${base(p)}» y los documentos que contiene se moverán a la Papelera de reciclaje, de donde se pueden recuperar.${warnDirty}`,
+      okLabel: 'Mover a la Papelera',
+      danger: true,
+    });
+    if (!ok) return;
+    const r = await window.api.fsDeleteDir(p);
+    if (!r.ok) return notify(r.error);
+    expanded.delete(p);
+    saveExpanded();
+    await refreshDir(parent(p));
+    onDeleted(p, true);
+  }
+
   async function remove(node) {
     const p = node.dataset.path;
-    if (node.dataset.dir === '1') return notify('Solo se pueden borrar documentos, no carpetas.');
+    if (node.dataset.dir === '1') return removeFolder(p);
     const dirty = isOpenDirty(p);
     const warnDirty = dirty ? ' Ojo: tiene cambios sin guardar en una pestaña abierta.' : '';
     const ask = (permanent) => confirm(permanent
@@ -449,43 +521,7 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
   }
 
   // ---- Menú contextual ----
-  let menuEl = null;
-  function closeMenu() {
-    menuEl?.remove();
-    menuEl = null;
-  }
-
-  function showMenu(x, y, items) {
-    closeMenu();
-    const m = document.createElement('div');
-    m.className = 'popup menu ctx';
-    for (const it of items) {
-      if (it === '-') {
-        m.append(Object.assign(document.createElement('div'), { className: 'ctx-sep' }));
-        continue;
-      }
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.disabled = !!it.disabled;
-      if (it.title) b.title = it.title;
-      b.insertAdjacentHTML('beforeend', icon(it.icon, 16));
-      const t = document.createElement('span');
-      t.textContent = it.label;
-      b.append(t);
-      if (it.key) b.insertAdjacentHTML('beforeend', `<kbd>${it.key}</kbd>`);
-      b.addEventListener('click', () => { closeMenu(); it.run(); });
-      m.append(b);
-    }
-    document.body.append(m);
-    const r = m.getBoundingClientRect();
-    m.style.left = `${Math.min(x, window.innerWidth - r.width - 6)}px`;
-    m.style.top = `${Math.min(y, window.innerHeight - r.height - 6)}px`;
-    menuEl = m;
-  }
-  document.addEventListener('mousedown', (e) => { if (menuEl && !e.target.closest('.ctx')) closeMenu(); });
-  window.addEventListener('blur', closeMenu);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
-
+  // El menú en sí (dibujo, submenús, teclado) está en contextmenu.js; aquí solo se decide qué opciones lleva.
   function menuFor(node) {
     const isDir = !!node && node.dataset.dir === '1';
     const dirOf = () => (node ? (isDir ? node : nodeFor(parent(node.dataset.path))) : null);
@@ -496,17 +532,24 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
       items.push('-');
     }
     items.push({ label: 'Nuevo documento', icon: 'filenew', run: () => newDoc(dirOf()) });
+    items.push({ label: 'Nueva carpeta', icon: 'folder', run: () => newFolder(dirOf()) });
     if (node && !isDir) {
       items.push({ label: 'Renombrar', icon: 'pencil', key: 'F2', run: () => rename(node) });
       items.push({ label: 'Copiar', icon: 'copy', key: 'Ctrl+C', run: () => copy(node) });
+      items.push({ label: 'Duplicar', icon: 'copy', run: () => duplicate(node) });
     }
     items.push({ label: 'Pegar', icon: 'paste2', key: 'Ctrl+V', disabled: !clip, run: () => paste(pasteTarget()) });
-    if (node && !isDir) {
+    if (node) {
+      items.push('-');
+      items.push({ label: 'Copiar ruta completa', icon: 'copy', run: () => copyText(node.dataset.path, 'Ruta') });
+      items.push({ label: 'Copiar nombre', icon: 'copy', run: () => copyText(base(node.dataset.path), 'Nombre') });
       items.push('-');
       items.push({
-        label: rootNet ? 'Borrar (definitivo, sin Papelera)' : 'Borrar (a la Papelera)',
+        label: isDir ? 'Borrar carpeta (a la Papelera)' : rootNet ? 'Borrar (definitivo, sin Papelera)' : 'Borrar (a la Papelera)',
         icon: 'trash',
         key: 'Supr',
+        disabled: isDir && !rootFixed,
+        title: isDir && !rootFixed ? NOT_FIXED_MSG : undefined,
         run: () => remove(node),
       });
     }
