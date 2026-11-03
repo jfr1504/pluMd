@@ -8,7 +8,8 @@
     "test": "node --test \"tests/*.test.js\"",
     "start": "node scripts/build.js && electron .",
     "watch": "node scripts/build.js --watch",
-    "dist": "node scripts/build.js && electron-builder --win nsis portable"
+    "dist": "node scripts/build.js && electron-builder --win nsis portable",
+    "dist:linux": "node scripts/build.js && electron-builder --linux AppImage deb"
   },
   "author": "Jorge Ferreira Rey",
   "homepage": "https://github.com/jfr1504/pluMd",
@@ -49,6 +50,7 @@
     "codemirror": "^6.0.2"
   },
   "productName": "PluMd",
+  "desktopName": "plumd",
   "private": true,
   "build": {
     "appId": "com.plumd.app",
@@ -90,6 +92,34 @@
     },
     "portable": {
       "artifactName": "PluMd-portable-${version}.exe"
+    },
+    "linux": {
+      "category": "Office",
+      "icon": "build/icon.png",
+      "maintainer": "Jorge Ferreira Rey",
+      "syncDesktopName": true,
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "fileAssociations": [
+        {
+          "ext": "md",
+          "name": "Documento Markdown",
+          "description": "Documento Markdown",
+          "mimeType": "text/markdown"
+        },
+        {
+          "ext": "markdown",
+          "name": "Documento Markdown",
+          "mimeType": "text/markdown"
+        }
+      ],
+      "artifactName": "PluMd-${version}-${arch}.${ext}"
+    },
+    "deb": {
+      "synopsis": "Editor y visor de Markdown",
+      "description": "Editor y visor de documentos Markdown con pestañas, vista de lectura y plugins."
     }
   }
 }

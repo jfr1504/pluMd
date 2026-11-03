@@ -2,17 +2,21 @@
 
 # PluMd
 
-Editor y visor de ficheros Markdown (`.md`) para Windows, con cinta de opciones tipo Word. Pensado como primer servicio de una plataforma de herramientas internas con arquitectura de plugins.
+Editor y visor de ficheros Markdown (`.md`) para Windows y Linux, con cinta de opciones tipo Word. Pensado como primer servicio de una plataforma de herramientas internas con arquitectura de plugins.
 
 <p align="center"><img src="docs/screenshots/plumd-oscuro.png" alt="PluMd con el panel de carpetas, pestañas de documentos y la cinta de opciones, en modo oscuro"></p>
 
 ## Descargar
 
-Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest) y descarga `PluMd-Setup-X.Y.Z.exe` (instalador, registra los `.md`) o `PluMd-portable-X.Y.Z.exe` (no necesita instalación: se ejecuta con doble clic).
+Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest) y descarga el paquete de tu sistema:
+
+- **Windows:** `PluMd-Setup-X.Y.Z.exe` (instalador, registra los `.md`) o `PluMd-portable-X.Y.Z.exe`.
+- **Linux:** `PluMd-X.Y.Z-x86_64.AppImage` (portable) o `PluMd-X.Y.Z-amd64.deb` (Debian/Ubuntu; integra los tipos `.md` y `.markdown` con el escritorio).
 
 - Windows SmartScreen puede mostrar "Windows protegió su PC", porque el programa aún no está firmado. Pulsa "Más información" y luego "Ejecutar de todos modos".
-- Cada versión incluye `SHA256SUMS.txt` para comprobar que el fichero descargado es el publicado. El `.exe` lo compila GitHub a partir del código de este repositorio.
-- El portable no registra por sí solo los `.md` como suyos. Para abrirlos con doble clic, usa "Abrir con" sobre un `.md` una vez y elige PluMd, o instala con el instalador.
+- En Linux, puede ser necesario marcar el AppImage como ejecutable (`chmod +x PluMd-*.AppImage`); necesita compatibilidad FUSE 2. Si el sistema no la tiene, usa el `.deb`.
+- Cada versión incluye `SHA256SUMS.txt` para comprobar los ficheros descargados. Los paquetes los compila GitHub a partir del código de este repositorio.
+- En Windows, el portable no registra por sí solo los `.md` como suyos. Para abrirlos con doble clic, usa "Abrir con" sobre un `.md` una vez y elige PluMd, o instala con el instalador.
 
 ## Qué hace
 
@@ -21,7 +25,7 @@ Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest)
 - Cinta de opciones a todo el ancho, con pestañas Inicio, Insertar, Vista y Ayuda: estilos de título, negrita, cursiva, subrayado, listas, tareas, tablas editables (el ancho de las columnas se ajusta arrastrando el borde de la cabecera y el texto se ajusta a la celda), imágenes, vínculos (a páginas web o a carpetas, incluidas las de red), bloques de código con resaltado, búsqueda y zoom. Al escribir `/` en el editor se abre un menú de comandos para insertar títulos, listas, tablas y más.
 - Pegar imágenes: Ctrl+V con una captura en el portapapeles la guarda en `imagenes/aammdd_hhmm.png` junto al documento y deja el vínculo. El documento debe estar guardado. Las imágenes remotas (https) no se cargan hasta pulsar «Cargar» en cada una.
 - Varios documentos a la vez en pestañas. Se abren con Abrir, con doble clic o arrastrando los `.md` sobre la ventana. Se pueden cerrar todas; sin documentos abiertos aparece una pantalla con Nuevo y Abrir.
-- Panel de carpetas a la izquierda, abierto por defecto (se cierra con la cruz y se vuelve a abrir desde Vista) (Archivo > Abrir carpeta, o arrastrando una carpeta): muestra los `.md`, `.markdown` y `.txt`, se abren en pestaña con un clic y se recuerda la última carpeta. Escribir una ruta (`C:\Datos` o `\\servidor\recurso`) en la caja del panel y pulsar Intro abre el diálogo de carpeta ya situado en ella. Con el botón derecho: nuevo documento, renombrar, copiar, pegar y borrar. Borrar envía a la Papelera con confirmación; en unidades de red no hay Papelera, así que pide una confirmación aparte y el borrado es definitivo; nada se sobrescribe y solo se actúa dentro de la carpeta abierta.
+- Panel de carpetas a la izquierda, abierto por defecto (se cierra con la cruz y se vuelve a abrir desde Vista) (Archivo > Abrir carpeta, o arrastrando una carpeta): muestra los `.md`, `.markdown` y `.txt`, se abren en pestaña con un clic y se recuerda la última carpeta. Escribir una ruta (`C:\Datos`, `\\servidor\recurso` o `/home/usuario/documentos`) en la caja del panel y pulsar Intro abre el diálogo de carpeta ya situado en ella. Con el botón derecho: nuevo documento, renombrar, copiar, pegar y borrar. Borrar envía a la Papelera con confirmación; en unidades de red de Windows no hay Papelera, así que pide una confirmación aparte y el borrado es definitivo; nada se sobrescribe y solo se actúa dentro de la carpeta abierta.
 - Los títulos se pueden contraer con la flecha de su izquierda, como en Obsidian.
 - Tres aspectos (PluMd, Windows y Mac), cada uno en modo claro y oscuro (Vista > Aspecto). Solo cambian el aspecto, no la distribución. Los skins son hojas CSS con un registro (`src/renderer/skins.js`), pensado para que los futuros plugins añadan los suyos.
 - Colores personalizables para títulos, negrita, texto, vínculos y más (Vista > Personalizar colores).
@@ -44,7 +48,8 @@ Requisitos: Node.js 24 o superior.
 npm install
 npm start          # compila y abre la aplicación
 npm test           # pruebas del acceso a ficheros, el pegado de imágenes y el modelo de tablas
-npm run dist       # genera el instalador y la versión portable en release/
+npm run dist       # genera el instalador y el portable de Windows en release/
+npm run dist:linux # genera AppImage y .deb de Linux en release/
 ```
 
 ## Estructura
@@ -55,7 +60,7 @@ npm run dist       # genera el instalador y la versión portable en release/
 - `src/renderer/plugins/` y `src/main/plugins.js`: sistema de plugins (registros, API, cargador, pantalla de plugins).
 - `plugins-ejemplo/` y `docs/`: plugins de ejemplo y documentación.
 - `scripts/build.js`: empaquetado del renderer con esbuild.
-- `.github/workflows/`: compilación del instalador y el portable en GitHub y publicación de versiones al crear una etiqueta `vX.Y.Z`.
+- `.github/workflows/`: compilación de los paquetes para Windows y Linux y publicación al crear una etiqueta `vX.Y.Z`.
 
 ## Estado
 
