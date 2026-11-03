@@ -79,7 +79,7 @@ window.PluMdDraw = {
   estado() {
     if (!api) return null;
     const s = api.getAppState();
-    return { scrollX: s.scrollX, scrollY: s.scrollY, zoom: s.zoom.value };
+    return { scrollX: s.scrollX, scrollY: s.scrollY, zoom: s.zoom.value, elementos: api.getSceneElements().filter((e) => !e.isDeleted).length };
   },
 
   // Ajusta zoom y posición para ver todo el dibujo.
