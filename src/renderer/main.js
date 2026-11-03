@@ -46,6 +46,8 @@ const docs = [];
 let cur = null;
 let nextId = 1;
 let untitledCount = 0;
+let lastText = null; // último documento de texto activo: destino de «Insertar en nota»
+const AUTOSAVE_MS = 1500; // pausa tras el último cambio antes de guardar un dibujo solo
 
 // Lectura: documento limpio (marcas ocultas), editable como en un procesador de textos.
 // Código: el Markdown tal cual.
@@ -293,6 +295,8 @@ function activate(doc) {
   const isDraw = doc.kind === 'draw';
   $('editor').hidden = isDraw;
   $('draw').hidden = !isDraw;
+  ribbon?.setDrawContext(isDraw);
+  if (!isDraw) { lastText = doc; showZoom(state.zoom); }
   // La carpeta base se fija antes de montar el estado para que las imágenes relativas se resuelvan bien.
   setBaseDir(doc.file ? dirname(doc.file) : null);
   view.setState(doc.state);
@@ -323,10 +327,18 @@ function showDraw(doc) {
     d.latest = { elements, appState, files };
     const sig = dibujo.firma(elements);
     if (d.base === null) d.base = sig;
-    else if (sig !== d.base && !doc.dirty) {
-      doc.dirty = true;
-      renderTabs();
-      if (doc === cur) updateTitle();
+    else if (sig !== d.base) {
+      if (!doc.dirty) {
+        doc.dirty = true;
+        renderTabs();
+        if (doc === cur) updateTitle();
+      }
+      if (autosaveOn() && doc.file) scheduleAutosave(doc);
+    }
+    if (doc === cur) {
+      const m = dibujo.sincronizar(appState);
+      ribbon.setActive({ 'draw-grid': m.rejilla, 'draw-zen': m.zen, 'draw-readonly': m.lectura });
+      showZoom(m.zoom);
     }
   }).catch((e) => toast(`No se pudo abrir el dibujo: ${e.message}`, true));
 }
@@ -377,10 +389,12 @@ function newDoc() {
   activate(d);
 }
 
-function newDraw() {
-  const d = newDocObj(null, '', null, { escena: ESCENA_VACIA(), antes: undefined, embebidos: null, latest: null, base: null });
+// Un dibujo nuevo se guarda desde el primer momento en la carpeta de dibujos (si el guardado automático está activo).
+async function newDraw() {
+  const d = newDocObj(null, '', null, { escena: ESCENA_VACIA(), antes: undefined, embebidos: null, latest: null, base: null, timer: null });
   docs.push(d);
   activate(d);
+  if (autosaveOn()) await createInFolder(d);
 }
 
 // Nombre sugerido para un dibujo nuevo, como en Obsidian: «Dibujo 2026-11-02 23.40.33.excalidraw.md».
@@ -394,6 +408,7 @@ function drawFileName() {
 function closeDoc(d) {
   if (!d) return true;
   if (d.dirty && !confirm(`«${docName(d)}» tiene cambios sin guardar. ¿Cerrar sin guardar?`)) return false;
+  if (d.draw) clearTimeout(d.draw.timer);
   const i = docs.indexOf(d);
   docs.splice(i, 1);
   emit('document:closed', { path: d.file || null });
@@ -446,8 +461,8 @@ async function openFile(path) {
   }
 }
 
-async function save(force = false) {
-  const d = cur;
+async function save(force = false, target = cur) {
+  const d = target;
   if (!d) return;
   if (!d.file) return saveAs();
   const content = contentOf(d);
@@ -461,7 +476,7 @@ async function save(force = false) {
   }
   if (r.conflict) {
     showBanner('El fichero ha cambiado en disco desde que lo abriste.', [
-      ['Sobrescribir', () => save(true)],
+      ['Sobrescribir', () => save(true, d)],
       ['Cancelar', () => {}],
     ]);
     return;
@@ -533,7 +548,17 @@ const appearanceLabel = () => {
   return `${getSkin(root.dataset.skin).name}, modo ${root.dataset.theme === 'dark' ? 'oscuro' : 'claro'}`;
 };
 
+// Siguiente nivel de zoom: pasos de 10 puntos en el texto, de un cuarto en el lienzo.
+const zoomStep = (dir) => (cur && cur.kind === 'draw' ? dibujo.zoomActual() * (dir > 0 ? 1.25 : 0.8) : state.zoom + 10 * dir);
+
+function showZoom(pct) {
+  $('zoom').value = pct;
+  $('zoomval').textContent = `${pct}%`;
+}
+
+// Con un dibujo activo el zoom es el del lienzo; el aviso de Excalidraw actualiza la barra de estado.
 function setZoom(z) {
+  if (cur && cur.kind === 'draw') return dibujo.zoom(Math.round(z));
   state.zoom = Math.max(50, Math.min(250, Math.round(z)));
   $('editor').style.setProperty('--zoom', state.zoom / 100);
   $('zoom').value = state.zoom;
@@ -545,6 +570,16 @@ const commands = {
   // Archivo
   new: () => newDoc(),
   'new-draw': () => newDraw(),
+  fullscreen: () => toggleFullscreen(),
+  'draw-fit': () => dibujo.ajustar(),
+  'draw-grid': () => dibujo.ponerModo('rejilla', !dibujo.verModos().rejilla),
+  'draw-zen': () => dibujo.ponerModo('zen', !dibujo.verModos().zen),
+  'draw-readonly': () => dibujo.ponerModo('lectura', !dibujo.verModos().lectura),
+  'draw-export-png': () => drawExport('png'),
+  'draw-export-svg': () => drawExport('svg'),
+  'draw-insert': () => drawInsert(),
+  'draw-autosave': () => toggleAutosave(),
+  'draw-folder': () => pickDrawFolder(),
   open: async () => openFile(await window.api.openDialog()),
   save: () => save(),
   saveas: () => saveAs(),
@@ -588,8 +623,8 @@ const commands = {
   // Vista
   'mode-read': () => setMode('read'),
   'mode-source': () => setMode('source'),
-  'zoom-in': () => setZoom(state.zoom + 10),
-  'zoom-out': () => setZoom(state.zoom - 10),
+  'zoom-in': () => setZoom(zoomStep(1)),
+  'zoom-out': () => setZoom(zoomStep(-1)),
   'zoom-reset': () => setZoom(100),
   'theme-light': () => chooseTheme('light'),
   'theme-dark': () => chooseTheme('dark'),
@@ -685,6 +720,133 @@ explorer = createExplorer({
 });
 explorer.restore();
 
+// ---- Dibujos: guardado automático, exportar, insertar en una nota y pantalla completa ----
+const autosaveOn = () => {
+  try { return localStorage.getItem('drawAutosave') !== '0'; } catch { return true; }
+};
+
+// Aviso flotante que se retira solo (a los 3 s por defecto).
+let noticeTimer = null;
+function notice(text, ms = 3000) {
+  const n = $('float-note');
+  n.textContent = text;
+  n.classList.add('on');
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => n.classList.remove('on'), ms);
+}
+
+const folderLabel = (r) => (r.isDefault ? 'Descargas' : `«${r.folderName || r.name}»`);
+
+// Escena que se ve ahora: la última que avisó Excalidraw o, si no se ha tocado, la del fichero.
+const sceneOf = (d) => d.draw.latest || d.draw.escena;
+
+// Crea el fichero de un dibujo nuevo en la carpeta de dibujos (por defecto Descargas).
+async function createInFolder(d) {
+  try {
+    const r = await window.api.drawCreateAuto(drawFileName(), contentOf(d));
+    if (!r.ok) throw new Error(r.error);
+    d.file = r.path;
+    d.mtimeMs = r.mtimeMs;
+    markSaved(d);
+    renderTabs();
+    if (d === cur) { updateTitle(); explorer?.setActive(r.path); }
+    explorer?.refresh();
+    notice(`Guardado automático en ${folderLabel(r)}`);
+  } catch (e) {
+    toast(`No se pudo guardar el dibujo automáticamente: ${e.message}`, true);
+  }
+}
+
+// Guarda el dibujo un momento después del último cambio, no en cada trazo.
+function scheduleAutosave(doc) {
+  clearTimeout(doc.draw.timer);
+  doc.draw.timer = setTimeout(() => {
+    if (doc.dirty && doc.file && docs.includes(doc)) save(false, doc);
+  }, AUTOSAVE_MS);
+}
+
+async function toggleAutosave() {
+  const on = !autosaveOn();
+  try { localStorage.setItem('drawAutosave', on ? '1' : '0'); } catch { /* sin almacenamiento */ }
+  ribbon.setActive({ 'draw-autosave': on });
+  notice(on ? 'Guardado automático activado' : 'Guardado automático desactivado');
+  if (!on || !cur || cur.kind !== 'draw') return;
+  if (!cur.file) await createInFolder(cur);
+  else if (cur.dirty) scheduleAutosave(cur);
+}
+
+async function pickDrawFolder() {
+  const r = await window.api.drawPickFolder();
+  if (!r.ok) return toast(`No se pudo elegir la carpeta: ${r.error}`, true);
+  if (!r.canceled) notice(`Los dibujos nuevos se guardan en ${folderLabel(r)}`);
+}
+
+// PNG o SVG del dibujo activo; null si está vacío o no hay dibujo (ya avisó al usuario).
+async function drawImage(kind) {
+  if (!cur || cur.kind !== 'draw') {
+    toast('Abre un dibujo para exportarlo.');
+    return null;
+  }
+  const scene = sceneOf(cur);
+  if (!scene.elements.some((e) => !e.isDeleted)) {
+    notice('El dibujo está vacío: no hay nada que exportar.');
+    return null;
+  }
+  return dibujo.exportar(scene, kind);
+}
+
+async function drawExport(kind) {
+  try {
+    const data = await drawImage(kind);
+    if (!data) return;
+    const base = docName(cur).replace(/\.excalidraw\.md$/i, '').replace(/\.md$/i, '');
+    const r = await window.api.drawExport(`${base}.${kind}`, kind, data);
+    if (!r.ok) throw new Error(r.error);
+    if (!r.canceled) notice(`Exportado como ${r.path.split(/[\\/]/).pop()}`);
+  } catch (e) {
+    toast(`No se pudo exportar el dibujo: ${e.message}`, true);
+  }
+}
+
+// Guarda el dibujo como PNG en «imagenes/» junto a la nota y deja el vínculo en el cursor de la nota.
+async function drawInsert() {
+  const note = lastText && docs.includes(lastText) ? lastText : null;
+  if (!note || !note.file) {
+    toast('Abre y guarda una nota Markdown para insertar el dibujo: se guarda como imagen en la carpeta «imagenes» junto a ella.', true);
+    return;
+  }
+  try {
+    const png = await drawImage('png');
+    if (!png) return;
+    const r = await window.api.drawSaveImage(note.file, png);
+    if (!r.ok) throw new Error(r.error);
+    activate(note);
+    view.dispatch(view.state.replaceSelection(`![](${r.relative})`), { scrollIntoView: true, userEvent: 'input.paste' });
+    notice(`Dibujo insertado como ${r.relative}`);
+  } catch (e) {
+    toast(`No se pudo insertar el dibujo: ${e.message}`, true);
+  }
+}
+
+// Pantalla completa: el sistema la maximiza y el CSS (body.focus) oculta cinta, paneles y barras.
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch (e) {
+    toast(`No se pudo cambiar a pantalla completa: ${e.message}`, true);
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const on = !!document.fullscreenElement;
+  document.body.classList.toggle('focus', on);
+  ribbon.setActive({ fullscreen: on });
+});
+$('focus-exit').addEventListener('click', () => toggleFullscreen());
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'F11') { e.preventDefault(); toggleFullscreen(); }
+});
+
 // ---- Menú contextual (botón derecho) del editor, las tablas y las pestañas ----
 // El dibujo del menú está en contextmenu.js y sus opciones en editorMenu.js; aquí solo se conecta con la aplicación.
 const menuDeps = () => ({
@@ -753,6 +915,7 @@ const pluginHost = {
 
 // early.js ya fijó el tema y el skin guardados antes de pintar; aquí solo se sincronizan colores y cinta.
 refreshAppearance();
+ribbon.setActive({ 'draw-autosave': autosaveOn() });
 setMode('read');
 setZoom(100);
 renderTabs();

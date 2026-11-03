@@ -5,6 +5,7 @@ const { createFsOps } = require('./fsops');
 const { MD_RE, DENIED, createAccess, writeAtomic, savePastedImage, resolveImagePath } = require('./acceso');
 const { readClipboardPng } = require('./portapapeles');
 const { createPlugins, registerScheme } = require('./plugins');
+const { createDibujos } = require('./dibujos');
 
 // El esquema plumd-plugin:// (ficheros de los plugins) debe registrarse antes de que la app esté lista.
 registerScheme(protocol);
@@ -84,9 +85,11 @@ app.on('open-file', (e, f) => {
 
 let plugins = null;
 let access = null; // ficheros y carpetas autorizados (acceso.js)
+let dibujos = null; // carpeta de los dibujos nuevos (dibujos.js)
 
 app.whenReady().then(() => {
   access = createAccess({ storeFile: path.join(app.getPath('userData'), 'carpetas.json') });
+  dibujos = createDibujos({ settingsFile: path.join(app.getPath('userData'), 'dibujos.json'), defaultDir: app.getPath('downloads') });
   plugins = createPlugins({ userDataDir: app.getPath('userData'), argv: process.argv });
   plugins.installProtocol(protocol, net);
   pendingFile = fileFromArgs(process.argv);
@@ -261,6 +264,47 @@ ipcMain.handle('image:pasteClipboard', async (_e, docPath) => {
   if (!png) return { ok: false };
   return { ok: true, ...(await savePastedImage(docPath, png)) };
 });
+// ---- IPC: dibujos (Excalidraw) ----
+// La carpeta de los dibujos nuevos la guarda este proceso; el renderer solo pide crear un dibujo en ella.
+ipcMain.handle('draw:folder', guard(async () => ({ ok: true, ...(await dibujos.info()) })));
+ipcMain.handle('draw:pickFolder', guard(async () => {
+  const r = await dialog.showOpenDialog(win, {
+    properties: ['openDirectory', 'createDirectory'],
+    defaultPath: (await dibujos.info()).folder,
+  });
+  if (r.canceled) return { ok: true, canceled: true };
+  await dibujos.setFolder(r.filePaths[0]);
+  return { ok: true, ...(await dibujos.info()) };
+}));
+// Crea el dibujo (sin pisar otro) y lo autoriza para que el renderer pueda seguir guardándolo.
+ipcMain.handle('draw:createAuto', guard(async (name, content) => {
+  if (typeof name !== 'string' || typeof content !== 'string') throw new Error('Datos no válidos.');
+  const r = await dibujos.createNew(name, content);
+  await access.allowFile(r.path);
+  return { ok: true, ...r };
+}));
+// Exportar a PNG o SVG: el usuario elige el destino en un diálogo; el renderer solo envía el contenido.
+const MAX_EXPORT = 200 * 1024 * 1024;
+ipcMain.handle('draw:export', guard(async (suggested, kind, data) => {
+  if (kind !== 'png' && kind !== 'svg') throw new Error('Formato no válido.');
+  const buf = kind === 'png' ? Buffer.from(data) : Buffer.from(String(data), 'utf8');
+  if (!buf.length || buf.length > MAX_EXPORT) throw new Error('El contenido a exportar no es válido.');
+  const r = await dialog.showSaveDialog(win, {
+    defaultPath: typeof suggested === 'string' ? suggested : undefined,
+    filters: [kind === 'png' ? { name: 'Imagen PNG', extensions: ['png'] } : { name: 'Imagen SVG', extensions: ['svg'] }],
+  });
+  if (r.canceled) return { ok: true, canceled: true };
+  await fs.promises.writeFile(r.filePath, buf);
+  return { ok: true, path: r.filePath };
+}));
+// PNG del dibujo -> «imagenes/» junto a la nota (mismo criterio que las imágenes pegadas).
+ipcMain.handle('draw:saveImage', guard(async (docPath, bytes) => {
+  if (!(await mayUse(docPath))) throw denied();
+  const png = Buffer.from(bytes);
+  if (png.length < 8 || png.readUInt32BE(0) !== 0x89504e47) throw new Error('La imagen no es un PNG válido.');
+  return { ok: true, ...(await savePastedImage(docPath, png)) };
+}));
+
 // Imágenes del documento (menú contextual): la ruta se resuelve a partir de lo escrito en el vínculo (acceso.js)
 // y solo se copia al portapapeles o se muestra en el Explorador: nunca se abre ni se ejecuta.
 const localImagePath = (docPath, src) => resolveImagePath(docPath, src, mayUse);
