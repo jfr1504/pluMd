@@ -43,8 +43,14 @@ test('nombres no válidos o reservados se rechazan', async () => {
   const t = setup();
   try {
     await t.ops.setRoot(t.root);
-    for (const n of ['', '..', 'a/b', 'a:b', 'con', 'nul.md', 'x'.repeat(250)]) {
+    const invalid = ['', '..', 'a/b', 'x'.repeat(250)];
+    if (process.platform === 'win32') invalid.push('a:b', 'con', 'nul.md');
+    for (const n of invalid) {
       assert.equal((await t.ops.create(t.root, n)).ok, false, `debería rechazar «${n}»`);
+    }
+    if (process.platform !== 'win32') {
+      assert.equal((await t.ops.create(t.root, 'a:b')).ok, true);
+      assert.equal((await t.ops.create(t.root, 'con')).ok, true);
     }
   } finally {
     t.done();
@@ -63,6 +69,23 @@ test('renombrar no pisa otro documento; copiar añade " - copia"', async () => {
     assert.equal(c.ok, true);
     assert.equal(path.basename(c.path), 'a - copia.md');
     assert.equal(fs.readFileSync(path.join(t.root, 'a.md'), 'utf8'), 'A');
+  } finally {
+    t.done();
+  }
+});
+
+test('en Linux renombrar conserva la distinción de mayúsculas y no pisa archivos', { skip: process.platform === 'win32' }, async () => {
+  const t = setup();
+  try {
+    await t.ops.setRoot(t.root);
+    const lower = path.join(t.root, 'nota.md');
+    const upper = path.join(t.root, 'NOTA.md');
+    fs.writeFileSync(lower, 'minúsculas');
+    fs.writeFileSync(upper, 'mayúsculas');
+    const r = await t.ops.rename(lower, 'NOTA.md');
+    assert.equal(r.ok, false);
+    assert.equal(fs.readFileSync(lower, 'utf8'), 'minúsculas');
+    assert.equal(fs.readFileSync(upper, 'utf8'), 'mayúsculas');
   } finally {
     t.done();
   }
@@ -118,7 +141,24 @@ test('borrar en local envía a la Papelera y nunca borra carpetas ni otros tipos
   }
 });
 
-test('en red el borrado exige confirmación expresa y es definitivo', async () => {
+test('Linux usa la papelera del escritorio sin tratar rutas locales como unidades de red', { skip: process.platform === 'win32' }, async () => {
+  const t = setup({ network: true });
+  try {
+    const root = await t.ops.setRoot(t.root);
+    assert.equal(root.network, false);
+    const f = path.join(t.root, 'a.md');
+    fs.writeFileSync(f, 'A');
+    const r = await t.ops.remove(f);
+    assert.equal(r.ok, true);
+    assert.equal(r.permanent, false);
+    assert.deepEqual(t.calls.trash, [f]);
+    assert.deepEqual(t.calls.unlink, []);
+  } finally {
+    t.done();
+  }
+});
+
+test('en red el borrado exige confirmación expresa y es definitivo', { skip: process.platform !== 'win32' }, async () => {
   const t = setup({ network: true });
   try {
     const net = await t.ops.setRoot(t.root);
@@ -139,7 +179,7 @@ test('en red el borrado exige confirmación expresa y es definitivo', async () =
   }
 });
 
-test('si no se puede saber el tipo de unidad se trata como red', async () => {
+test('si no se puede saber el tipo de unidad se trata como red', { skip: process.platform !== 'win32' }, async () => {
   const t = setup();
   try {
     const ops = createFsOps({ trash: async () => {}, driveType: async () => null, unlink: async () => {} });

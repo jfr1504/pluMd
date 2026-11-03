@@ -349,7 +349,9 @@ function closeDoc(d) {
 
 async function openFile(path) {
   if (!path) return;
-  const same = docs.find((d) => d.file && d.file.toLowerCase() === path.toLowerCase());
+  const same = docs.find((d) => d.file && (window.api.platform === 'win32'
+    ? d.file.toLowerCase() === path.toLowerCase()
+    : d.file === path));
   if (same) return activate(same);
   try {
     const f = await window.api.readFile(path);
@@ -552,7 +554,9 @@ initStatusItems();
 ribbon.update(formatState(view.state));
 
 // ---- Panel de carpetas ----
-const sameFile = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+const sameFile = (a, b) => !!a && !!b && (window.api.platform === 'win32'
+  ? a.toLowerCase() === b.toLowerCase()
+  : a === b);
 let bannerTimer = null;
 function toast(text, sticky = false) {
   showBanner(text, [], sticky);

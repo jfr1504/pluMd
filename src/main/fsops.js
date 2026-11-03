@@ -13,8 +13,9 @@ const { execFile } = require('child_process');
 const { MD_RE, key: norm, within, realPath } = require('./acceso');
 
 const SKIP_DIRS = new Set(['node_modules', '$recycle.bin', 'system volume information']);
-const INVALID = /[<>:"/\\|?*\x00-\x1f]/;
-const RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
+const INVALID_WINDOWS = /[<>:"/\\|?*\x00-\x1f]/;
+const INVALID_POSIX = /[/\x00-\x1f]/;
+const RESERVED_WINDOWS = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
 
 const msg = {
   outside: 'La ruta está fuera de la carpeta abierta.',
@@ -39,7 +40,7 @@ function windowsDriveType(letter) {
   });
 }
 
-function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.promises.unlink(p) } = {}) {
+function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.promises.unlink(p), platform = process.platform } = {}) {
   let root = null;
   const driveCache = new Map();
 
@@ -55,6 +56,7 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
   };
 
   async function isNetworkPath(p) {
+    if (platform !== 'win32') return false;
     const s = String(p || '');
     if (/^\\\\/.test(s) || /^\/\//.test(s)) return true; // ruta UNC
     const m = /^([a-zA-Z]):/.exec(path.resolve(s));
@@ -67,7 +69,9 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
 
   function cleanName(raw, keepExt) {
     let name = String(raw || '').trim();
-    if (!name || name === '.' || name === '..' || INVALID.test(name) || RESERVED.test(name) || name.length > 200) return null;
+    const invalid = platform === 'win32' ? INVALID_WINDOWS : INVALID_POSIX;
+    const reserved = platform === 'win32' && RESERVED_WINDOWS.test(name);
+    if (!name || name === '.' || name === '..' || invalid.test(name) || reserved || name.length > 200) return null;
     if (!MD_RE.test(name)) name += keepExt || '.md';
     return name;
   }
@@ -146,7 +150,7 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
       const target = path.join(path.dirname(p), name);
       if (target === p) return { ok: true, path: p };
       // Un cambio solo de mayúsculas es el mismo fichero en Windows: se permite.
-      if (target.toLowerCase() !== p.toLowerCase() && (await exists(target))) return { ok: false, error: msg.exists };
+      if (norm(target) !== norm(p) && (await exists(target))) return { ok: false, error: msg.exists };
       try {
         await fs.promises.rename(p, target);
         return { ok: true, path: target };
