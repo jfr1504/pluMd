@@ -8,6 +8,7 @@ import './draw.css';
 
 const PADDING_EXPORT = 16; // múltiplo de 4, como el resto de espaciados
 const ESCALA_PNG = 2;
+const DURACION_VUELTA_MS = 300; // duración del traslado de «Volver al contenido»
 
 let root = null;
 let api = null; // API imperativa de la instancia de Excalidraw en pantalla
@@ -30,7 +31,16 @@ const salirPantallaCompleta = () =>
 
 window.PluMdDraw = {
   mount(el) {
-    if (!root) root = createRoot(el);
+    if (root) return;
+    root = createRoot(el);
+    // «Volver al contenido»: Excalidraw salta de golpe; aquí se intercepta el clic (en la fase de captura, antes
+    // que su propio manejador) y se traslada la vista con animación.
+    el.addEventListener('click', (e) => {
+      if (!api || !e.target.closest('.scroll-back-to-content')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      api.scrollToContent(api.getSceneElements(), { animate: true, duration: DURACION_VUELTA_MS });
+    }, true);
   },
 
   // Pinta (o actualiza) el lienzo. Con otra `key` se parte de la escena nueva.
@@ -63,6 +73,13 @@ window.PluMdDraw = {
     const cx = s.width / 2 / s.zoom.value - s.scrollX;
     const cy = s.height / 2 / s.zoom.value - s.scrollY;
     api.updateScene({ appState: { zoom: { value: z }, scrollX: s.width / 2 / z - cx, scrollY: s.height / 2 / z - cy } });
+  },
+
+  // Posición y zoom actuales de la vista (para comprobar los desplazamientos).
+  estado() {
+    if (!api) return null;
+    const s = api.getAppState();
+    return { scrollX: s.scrollX, scrollY: s.scrollY, zoom: s.zoom.value };
   },
 
   // Ajusta zoom y posición para ver todo el dibujo.
