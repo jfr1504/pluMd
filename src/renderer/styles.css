@@ -410,7 +410,7 @@ button.status-item:hover { background: var(--bg-3); color: var(--text); }
 /* ---- Dibujos: aviso flotante, pestaña contextual y pantalla completa ---- */
 /* Espaciados en múltiplos de 4 (4, 8, 16, 24, 32). */
 #tabs .tab[hidden] { display: none; }
-#float-note { position: fixed; left: 50%; bottom: 32px; z-index: 40; transform: translate(-50%, 8px); padding: 8px 16px; border-radius: var(--r-l); background: var(--accent); color: var(--on-accent); box-shadow: var(--shadow-pop); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+#float-note { position: fixed; left: 50%; bottom: 96px; z-index: 40; transform: translate(-50%, 8px); padding: 8px 16px; border-radius: var(--r-l); background: var(--accent); color: var(--on-accent); box-shadow: var(--shadow-pop); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
 #float-note.on { opacity: 1; transform: translate(-50%, 0); }
 #focus-exit { display: none; position: fixed; top: 16px; right: 16px; z-index: 40; width: 32px; height: 32px; border: 0; border-radius: var(--r-l); background: #c42b1c; color: #fff; box-shadow: var(--shadow-pop); }
 #focus-exit:hover { background: #a82314; }
