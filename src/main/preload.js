@@ -37,6 +37,8 @@ contextBridge.exposeInMainWorld('api', {
   drawPickFolder: () => ipcRenderer.invoke('draw:pickFolder'),
   drawCreateAuto: (name, content) => ipcRenderer.invoke('draw:createAuto', name, content),
   drawExport: (suggested, kind, data) => ipcRenderer.invoke('draw:export', suggested, kind, data),
+  drawLibraryGet: () => ipcRenderer.invoke('draw:libraryGet'),
+  drawLibrarySet: (items) => ipcRenderer.invoke('draw:librarySet', items),
   drawSaveImage: (docPath, bytes) => ipcRenderer.invoke('draw:saveImage', docPath, bytes),
   pluginsList: () => ipcRenderer.invoke('plugins:list'),
   pluginsSetEnabled: (id, on, v) => ipcRenderer.invoke('plugins:setEnabled', id, on, v),

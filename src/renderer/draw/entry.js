@@ -35,11 +35,12 @@ window.PluMdDraw = {
 
   // Pinta (o actualiza) el lienzo. Con otra `key` se parte de la escena nueva.
   // `modos`: { rejilla, zen, lectura }, controlados desde la cinta de PluMd.
-  render({ key, escena, theme, modos, onChange }) {
+  // `libreria` y `onLibrary`: la biblioteca de formas guardada y el aviso cuando el usuario la cambia.
+  render({ key, escena, theme, modos, libreria, onLibrary, onChange }) {
     const datos = restore({ elements: escena.elements, appState: escena.appState, files: escena.files }, null, null);
     root.render(h(Excalidraw, {
       key,
-      initialData: { ...datos, scrollToContent: true },
+      initialData: { ...datos, libraryItems: libreria || [], scrollToContent: true },
       excalidrawAPI: (a) => { api = a; },
       theme,
       langCode: 'es-ES',
@@ -48,6 +49,7 @@ window.PluMdDraw = {
       zenModeEnabled: !!modos.zen,
       viewModeEnabled: !!modos.lectura,
       onChange,
+      onLibraryChange: onLibrary,
       renderTopRightUI: () => salirPantallaCompleta(), // función nueva en cada pintado: así Excalidraw la vuelve a evaluar
       UIOptions: { canvasActions: { loadScene: false, saveToActiveFile: false, toggleTheme: false } },
     }, menu()));

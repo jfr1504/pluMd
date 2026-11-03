@@ -89,7 +89,7 @@ let dibujos = null; // carpeta de los dibujos nuevos (dibujos.js)
 
 app.whenReady().then(() => {
   access = createAccess({ storeFile: path.join(app.getPath('userData'), 'carpetas.json') });
-  dibujos = createDibujos({ settingsFile: path.join(app.getPath('userData'), 'dibujos.json'), defaultDir: app.getPath('downloads') });
+  dibujos = createDibujos({ settingsFile: path.join(app.getPath('userData'), 'dibujos.json'), defaultDir: app.getPath('downloads'), libraryFile: path.join(app.getPath('userData'), 'biblioteca-dibujos.json') });
   plugins = createPlugins({ userDataDir: app.getPath('userData'), argv: process.argv });
   plugins.installProtocol(protocol, net);
   pendingFile = fileFromArgs(process.argv);
@@ -282,6 +282,12 @@ ipcMain.handle('draw:createAuto', guard(async (name, content) => {
   const r = await dibujos.createNew(name, content);
   await access.allowFile(r.path);
   return { ok: true, ...r };
+}));
+// Biblioteca de formas de Excalidraw: se conserva entre sesiones en la carpeta de datos de la aplicación.
+ipcMain.handle('draw:libraryGet', guard(async () => ({ ok: true, items: await dibujos.leerBiblioteca() })));
+ipcMain.handle('draw:librarySet', guard(async (items) => {
+  await dibujos.guardarBiblioteca(items);
+  return { ok: true };
 }));
 // Exportar a PNG o SVG: el usuario elige el destino en un diálogo; el renderer solo envía el contenido.
 const MAX_EXPORT = 200 * 1024 * 1024;

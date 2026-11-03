@@ -5,6 +5,7 @@ const path = require('path');
 
 const EXT = '.excalidraw.md';
 const MAX_INTENTOS = 100;
+const MAX_BIBLIOTECA = 20 * 1024 * 1024; // la biblioteca de formas no debería acercarse a esto
 
 // Nombre válido en Windows: solo el último tramo, sin caracteres prohibidos y con la extensión del dibujo.
 function nombreSeguro(nombre) {
@@ -18,7 +19,7 @@ function nombreSeguro(nombre) {
   return (limpio || 'Dibujo') + EXT;
 }
 
-function createDibujos({ settingsFile, defaultDir }) {
+function createDibujos({ settingsFile, defaultDir, libraryFile }) {
   async function leerAjustes() {
     try {
       return JSON.parse(await fs.promises.readFile(settingsFile, 'utf8')) || {};
@@ -67,7 +68,28 @@ function createDibujos({ settingsFile, defaultDir }) {
     throw new Error('Demasiados dibujos con el mismo nombre en esa carpeta.');
   }
 
-  return { info, setFolder, createNew };
+  // Biblioteca de formas de Excalidraw: una lista que se guarda tal cual y se devuelve al abrir un dibujo.
+  async function leerBiblioteca() {
+    try {
+      const v = JSON.parse(await fs.promises.readFile(libraryFile, 'utf8'));
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
+  }
+
+  // Escritura atómica: un corte a mitad no deja la biblioteca truncada.
+  async function guardarBiblioteca(items) {
+    if (!Array.isArray(items)) throw new Error('La biblioteca no es válida.');
+    const json = JSON.stringify(items);
+    if (json.length > MAX_BIBLIOTECA) throw new Error('La biblioteca es demasiado grande.');
+    await fs.promises.mkdir(path.dirname(libraryFile), { recursive: true });
+    const tmp = `${libraryFile}.${process.pid}.tmp`;
+    await fs.promises.writeFile(tmp, json, 'utf8');
+    await fs.promises.rename(tmp, libraryFile);
+  }
+
+  return { info, setFolder, createNew, leerBiblioteca, guardarBiblioteca };
 }
 
 module.exports = { createDibujos, nombreSeguro, EXT };

@@ -4,6 +4,8 @@ let cargando = null;
 let actual = null; // { doc, onChange } del dibujo visible
 let zoomPct = 100; // zoom del lienzo según el último aviso de Excalidraw
 const modos = { rejilla: false, zen: false, lectura: false };
+let biblioteca = null; // biblioteca de formas: se lee una vez del proceso principal y se guarda tras cada cambio
+let guardarBibliotecaTimer = null;
 
 export function listo() {
   if (window.PluMdDraw) return Promise.resolve();
@@ -28,16 +30,33 @@ const tema = () => (document.documentElement.dataset.theme === 'dark' ? 'dark' :
 // Identifica el contenido del dibujo: si cambia, el documento tiene cambios sin guardar.
 export const firma = (elements) => (elements || []).map((e) => `${e.id}:${e.version}`).join('|');
 
+async function cargarBiblioteca() {
+  if (biblioteca) return;
+  try {
+    const r = await window.api.drawLibraryGet();
+    biblioteca = r.ok && Array.isArray(r.items) ? r.items : [];
+  } catch {
+    biblioteca = [];
+  }
+}
+
+// Las formas añadidas o borradas se guardan un instante después, no en cada cambio.
+function alCambiarBiblioteca(items) {
+  biblioteca = items;
+  clearTimeout(guardarBibliotecaTimer);
+  guardarBibliotecaTimer = setTimeout(() => window.api.drawLibrarySet(items).catch(() => {}), 500);
+}
+
 function pintar() {
   const { doc, onChange } = actual;
   const { latest, escena } = doc.draw;
-  window.PluMdDraw.render({ key: doc.id, escena: latest || escena, theme: tema(), modos, onChange });
+  window.PluMdDraw.render({ key: doc.id, escena: latest || escena, theme: tema(), modos, libreria: biblioteca, onLibrary: alCambiarBiblioteca, onChange });
 }
 
 // Muestra el dibujo del documento en el contenedor. `onChange(elements, appState, files)` avisa de cada cambio.
 export async function mostrar(contenedor, doc, onChange) {
   actual = { doc, onChange };
-  await listo();
+  await Promise.all([listo(), cargarBiblioteca()]);
   if (!actual || actual.doc !== doc) return; // mientras cargaba se cambió de pestaña
   window.PluMdDraw.mount(contenedor);
   pintar();

@@ -9,7 +9,7 @@ function entorno() {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'plumd-dib-'));
   const descargas = path.join(base, 'Descargas');
   fs.mkdirSync(descargas);
-  const d = createDibujos({ settingsFile: path.join(base, 'ajustes', 'dibujos.json'), defaultDir: descargas });
+  const d = createDibujos({ settingsFile: path.join(base, 'ajustes', 'dibujos.json'), defaultDir: descargas, libraryFile: path.join(base, 'ajustes', 'biblioteca.json') });
   return { base, descargas, d, limpiar: () => fs.rmSync(base, { recursive: true, force: true }) };
 }
 
@@ -71,5 +71,37 @@ test('un dibujo nuevo se crea en la carpeta y nunca pisa otro', async () => {
   assert.equal(fs.readFileSync(a.path, 'utf8'), 'uno');
   assert.equal(fs.readFileSync(b.path, 'utf8'), 'dos');
   assert.equal(a.folderName, 'Descargas');
+  limpiar();
+});
+
+test('la biblioteca de formas empieza vacía y se conserva entre lecturas', async () => {
+  const { d, limpiar } = entorno();
+  assert.deepEqual(await d.leerBiblioteca(), []);
+  const items = [{ id: 'a', status: 'unpublished', created: 1, elements: [{ id: 'r1', type: 'rectangle' }] }];
+  await d.guardarBiblioteca(items);
+  assert.deepEqual(await d.leerBiblioteca(), items);
+  limpiar();
+});
+
+test('una biblioteca dañada o que no es una lista se lee como vacía', async () => {
+  const { d, base, limpiar } = entorno();
+  fs.mkdirSync(path.join(base, 'ajustes'));
+  fs.writeFileSync(path.join(base, 'ajustes', 'biblioteca.json'), '{ no es json');
+  assert.deepEqual(await d.leerBiblioteca(), []);
+  fs.writeFileSync(path.join(base, 'ajustes', 'biblioteca.json'), '{"a":1}');
+  assert.deepEqual(await d.leerBiblioteca(), []);
+  limpiar();
+});
+
+test('no se guarda una biblioteca que no es una lista', async () => {
+  const { d, limpiar } = entorno();
+  await assert.rejects(() => d.guardarBiblioteca({ a: 1 }), /no es válida/);
+  limpiar();
+});
+
+test('al guardar la biblioteca no queda ningún temporal', async () => {
+  const { d, base, limpiar } = entorno();
+  await d.guardarBiblioteca([]);
+  assert.deepEqual(fs.readdirSync(path.join(base, 'ajustes')), ['biblioteca.json']);
   limpiar();
 });
