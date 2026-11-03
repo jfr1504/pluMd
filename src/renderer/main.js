@@ -27,6 +27,8 @@ import { openPluginsDialog, openPalette } from './plugins/ui.js';
 import { initSidebarPanels } from './plugins/sidebar.js';
 import { initStatusItems } from './plugins/statusbar.js';
 import { slashMenu } from './slashMenu.js';
+import { esExcalidraw, parseExcalidraw, serializeExcalidraw, ESCENA_VACIA } from './excalidrawModelo.mjs';
+import * as dibujo from './drawView.js';
 
 const $ = (id) => document.getElementById(id);
 const scroller = () => document.querySelector('main');
@@ -113,6 +115,7 @@ const askImageHere = (d) => askImage(d, () => cur && cur.file);
 let countTimer = null;
 function updateCount(s) {
   clearTimeout(countTimer);
+  if (cur && cur.kind === 'draw') { $('wordcount').textContent = ''; return; }
   countTimer = setTimeout(() => {
     const n = (s.doc.toString().match(/\S+/g) || []).length;
     $('wordcount').textContent = `${n} ${n === 1 ? 'palabra' : 'palabras'}`;
@@ -182,7 +185,9 @@ const baseExtensions = [
   }),
 ];
 
-function newDocObj(file, content, mtimeMs) {
+// `draw` convierte el documento en un dibujo Excalidraw: { escena, antes, embebidos, latest, base }.
+// Su estado de texto queda vacío y oculto; el contenido vive en la escena.
+function newDocObj(file, content, mtimeMs, draw = null) {
   return {
     id: nextId++,
     file,
@@ -190,7 +195,9 @@ function newDocObj(file, content, mtimeMs) {
     dirty: false,
     scroll: 0,
     untitled: file ? 0 : ++untitledCount,
-    state: EditorState.create({ doc: content, extensions: baseExtensions }),
+    kind: draw ? 'draw' : 'text',
+    draw,
+    state: EditorState.create({ doc: draw ? '' : content, extensions: baseExtensions }),
   };
 }
 
@@ -200,7 +207,11 @@ cur = first;
 
 const view = new EditorView({ parent: $('editor'), state: first.state });
 
-const docName = (d) => (d.file ? d.file.split(/[\\/]/).pop() : d.untitled > 1 ? `Documento sin título ${d.untitled}` : 'Documento sin título');
+const docName = (d) => {
+  if (d.file) return d.file.split(/[\\/]/).pop();
+  const base = d.kind === 'draw' ? 'Dibujo sin título' : 'Documento sin título';
+  return d.untitled > 1 ? `${base} ${d.untitled}` : base;
+};
 
 function updateTitle() {
   if (!cur) {
@@ -217,6 +228,7 @@ function updateTitle() {
 // Sin documentos abiertos: se oculta el editor y se ofrece crear uno nuevo o abrir un fichero.
 function showNoDocs(on) {
   $('editor').hidden = on;
+  if (on) $('draw').hidden = true;
   $('no-docs').hidden = !on;
   if (on) $('wordcount').textContent = '';
 }
@@ -272,12 +284,15 @@ function renderTabs() {
 }
 
 function activate(doc) {
-  if (cur && cur !== doc) {
+  if (cur && cur !== doc && cur.kind !== 'draw') {
     cur.state = view.state;
     cur.scroll = scroller().scrollTop;
   }
   cur = doc;
   showNoDocs(false);
+  const isDraw = doc.kind === 'draw';
+  $('editor').hidden = isDraw;
+  $('draw').hidden = !isDraw;
   // La carpeta base se fija antes de montar el estado para que las imágenes relativas se resuelvan bien.
   setBaseDir(doc.file ? dirname(doc.file) : null);
   view.setState(doc.state);
@@ -290,9 +305,43 @@ function activate(doc) {
   updateCount(view.state);
   ribbon?.update(formatState(view.state));
   explorer?.setActive(doc.file);
-  requestAnimationFrame(() => { scroller().scrollTop = doc.scroll; });
-  view.focus();
+  if (isDraw) showDraw(doc);
+  else {
+    dibujo.ocultar();
+    requestAnimationFrame(() => { scroller().scrollTop = doc.scroll; });
+    view.focus();
+  }
   emit('document:activated', { path: doc.file || null });
+}
+
+// Dibujo en pantalla. El aviso de cambio compara versiones de elementos: Excalidraw también avisa al mover
+// el lienzo o cambiar el zoom, y eso no debe marcar el documento como modificado.
+function showDraw(doc) {
+  if (!doc.dirty) doc.draw.base = null;
+  dibujo.mostrar($('draw'), doc, (elements, appState, files) => {
+    const d = doc.draw;
+    d.latest = { elements, appState, files };
+    const sig = dibujo.firma(elements);
+    if (d.base === null) d.base = sig;
+    else if (sig !== d.base && !doc.dirty) {
+      doc.dirty = true;
+      renderTabs();
+      if (doc === cur) updateTitle();
+    }
+  }).catch((e) => toast(`No se pudo abrir el dibujo: ${e.message}`, true));
+}
+
+// Texto que se escribe en disco: el del editor, o el .excalidraw.md de la escena si es un dibujo.
+function contentOf(d) {
+  if (d.kind !== 'draw') return view.state.doc.toString();
+  const { latest, escena, antes, embebidos } = d.draw;
+  return serializeExcalidraw({ antes, escena: latest ? dibujo.serializar(latest) : escena, embebidos });
+}
+
+// Tras guardar, el estado actual del dibujo pasa a ser la referencia para detectar cambios.
+function markSaved(d) {
+  d.dirty = false;
+  if (d.kind === 'draw' && d.draw.latest) d.draw.base = dibujo.firma(d.draw.latest.elements);
 }
 
 // Aplica las extensiones de CodeMirror de los plugins activos al documento visible. Si alguna no es
@@ -328,6 +377,19 @@ function newDoc() {
   activate(d);
 }
 
+function newDraw() {
+  const d = newDocObj(null, '', null, { escena: ESCENA_VACIA(), antes: undefined, embebidos: null, latest: null, base: null });
+  docs.push(d);
+  activate(d);
+}
+
+// Nombre sugerido para un dibujo nuevo, como en Obsidian: «Dibujo 2026-11-02 23.40.33.excalidraw.md».
+function drawFileName() {
+  const n = new Date();
+  const p = (x) => String(x).padStart(2, '0');
+  return `Dibujo ${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())} ${p(n.getHours())}.${p(n.getMinutes())}.${p(n.getSeconds())}.excalidraw.md`;
+}
+
 // Devuelve false si el usuario decidió no cerrar un documento con cambios sin guardar.
 function closeDoc(d) {
   if (!d) return true;
@@ -339,6 +401,7 @@ function closeDoc(d) {
     // Se puede cerrar todo: no se abre otro documento solo. La numeración de «sin título» vuelve a empezar.
     cur = null;
     untitledCount = 0;
+    dibujo.ocultar();
     showNoDocs(true);
     renderTabs();
     updateTitle();
@@ -362,9 +425,17 @@ async function openFile(path) {
   if (same) return activate(same);
   try {
     const f = await window.api.readFile(path);
-    const doc = newDocObj(f.path, f.content, f.mtimeMs);
+    let draw = null;
+    if (esExcalidraw(f.path, f.content)) {
+      try {
+        draw = { ...parseExcalidraw(f.content), latest: null, base: null };
+      } catch (e) {
+        toast(`No se pudo leer el dibujo (${e.message}). Se abre como texto.`, true);
+      }
+    }
+    const doc = newDocObj(f.path, f.content, f.mtimeMs, draw);
     // Un documento nuevo, vacío y sin tocar se reutiliza en vez de dejar una pestaña vacía.
-    const pristine = !!cur && !cur.file && !cur.dirty && view.state.doc.length === 0;
+    const pristine = !!cur && cur.kind !== 'draw' && !cur.file && !cur.dirty && view.state.doc.length === 0;
     if (pristine) docs[docs.indexOf(cur)] = doc;
     else docs.push(doc);
     if (pristine) cur = null;
@@ -379,7 +450,7 @@ async function save(force = false) {
   const d = cur;
   if (!d) return;
   if (!d.file) return saveAs();
-  const content = view.state.doc.toString();
+  const content = contentOf(d);
   let r;
   try {
     r = await window.api.writeFile({ path: d.file, content, expectedMtimeMs: d.mtimeMs, force });
@@ -396,7 +467,7 @@ async function save(force = false) {
     return;
   }
   d.mtimeMs = r.mtimeMs;
-  d.dirty = false;
+  markSaved(d);
   renderTabs();
   if (d === cur) updateTitle();
   emit('document:saved', { path: d.file });
@@ -405,8 +476,8 @@ async function save(force = false) {
 async function saveAs() {
   const d = cur;
   if (!d) return;
-  const content = view.state.doc.toString();
-  const p = await window.api.saveAsDialog(d.file || 'sin-titulo.md');
+  const content = contentOf(d);
+  const p = await window.api.saveAsDialog(d.file || (d.kind === 'draw' ? drawFileName() : 'sin-titulo.md'));
   if (!p) return;
   let r;
   try {
@@ -417,7 +488,7 @@ async function saveAs() {
   }
   d.file = p;
   d.mtimeMs = r.mtimeMs;
-  d.dirty = false;
+  markSaved(d);
   if (d === cur) setBaseDir(dirname(p));
   renderTabs();
   if (d === cur) { updateTitle(); explorer?.setActive(p); }
@@ -439,6 +510,7 @@ function refreshAppearance() {
   const skin = root.dataset.skin || 'plumd';
   const theme = root.dataset.theme || 'light';
   setScope(skin, theme);
+  dibujo.actualizarTema();
   const active = { 'theme-light': theme === 'light', 'theme-dark': theme === 'dark' };
   for (const k of listSkins()) active[`skin-${k.id}`] = k.id === skin;
   ribbon.setActive(active);
@@ -472,6 +544,7 @@ function setZoom(z) {
 const commands = {
   // Archivo
   new: () => newDoc(),
+  'new-draw': () => newDraw(),
   open: async () => openFile(await window.api.openDialog()),
   save: () => save(),
   saveas: () => saveAs(),
@@ -540,7 +613,7 @@ commands['style-quote'] = (v) => setParagraphStyle(v, 'quote');
 
 // Los comandos del núcleo viven en el mismo registro que los de los plugins.
 // Sin documento abierto, los comandos que actúan sobre el texto (los que reciben el editor) no hacen nada.
-for (const [id, fn] of Object.entries(commands)) registerCommand({ id, run: (arg) => (fn.length > 0 && !cur ? undefined : fn(view, arg)) });
+for (const [id, fn] of Object.entries(commands)) registerCommand({ id, run: (arg) => (fn.length > 0 && (!cur || cur.kind === 'draw') ? undefined : fn(view, arg)) });
 function syncSkinCommands() {
   for (const k of listSkins()) if (!getCommand(`skin-${k.id}`)) registerCommand({ id: `skin-${k.id}`, run: () => chooseSkin(k.id) });
 }
@@ -685,6 +758,7 @@ setZoom(100);
 renderTabs();
 updateTitle();
 $('nd-new').addEventListener('click', () => newDoc());
+$('nd-draw').addEventListener('click', () => newDraw());
 $('nd-open').addEventListener('click', () => commands.open());
 
 // Plugins: se cargan al final, cuando la interfaz ya está lista. Si fallan, la aplicación sigue funcionando.
@@ -706,7 +780,7 @@ $('nd-open').addEventListener('click', () => commands.open());
 
 $('zoom').addEventListener('input', (e) => setZoom(+e.target.value));
 window.addEventListener('wheel', (e) => {
-  if (!e.ctrlKey) return;
+  if (!e.ctrlKey || (cur && cur.kind === 'draw')) return;
   e.preventDefault();
   setZoom(state.zoom + (e.deltaY < 0 ? 10 : -10));
 }, { passive: false });
@@ -771,6 +845,7 @@ window.addEventListener('keydown', async (e) => {
   }
   else if (k === 'p' && e.shiftKey) { e.preventDefault(); commands.palette(); }
   else if (k === 'e' && e.shiftKey) { e.preventDefault(); explorer.toggle(); }
+  else if (cur && cur.kind === 'draw' && ['e', '=', '+', '-', '0'].includes(k)) return; // atajos del lienzo
   else if (k === 'o' && e.shiftKey) { e.preventDefault(); explorer.openFolderDialog(); }
   else if (k === 'e') { e.preventDefault(); setMode(state.mode === 'read' ? 'source' : 'read'); }
   else if (k === '=' || k === '+') { e.preventDefault(); setZoom(state.zoom + 10); }

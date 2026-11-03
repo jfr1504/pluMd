@@ -124,7 +124,8 @@ body.ribbon-collapsed #btn-collapse svg { transform: rotate(180deg); }
 /* ---- Documento ---- */
 main { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
 #editor { padding: 20px 40px 120px; --zoom: 1; }
-#editor[hidden], #no-docs[hidden] { display: none; }
+#editor[hidden], #no-docs[hidden], #draw[hidden] { display: none; }
+#draw { height: 100%; }
 #no-docs { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; height: 100%; min-height: 240px; color: var(--muted); }
 #no-docs p { margin: 0; font-size: 1.05em; }
 #no-docs div { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }

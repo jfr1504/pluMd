@@ -172,7 +172,7 @@ export function createRibbon({ run }) {
   fileMenu.className = 'popup menu';
   fileMenu.hidden = true;
   fileMenu.innerHTML = [
-    ['new', 'Nuevo   Ctrl+N', 'filecode'], ['open', 'Abrir…   Ctrl+O', 'open'], ['open-folder', 'Abrir carpeta…   Ctrl+Mayús+O', 'folder'], ['save', 'Guardar   Ctrl+S', 'save'], ['saveas', 'Guardar como…', 'saveas'], ['close', 'Cerrar documento   Ctrl+W', 'open'], ['plugins', 'Plugins…', 'puzzle'], ['palette', 'Paleta de comandos   Ctrl+Mayús+P', 'search'], ['about', 'Acerca de…', 'info'],
+    ['new', 'Nuevo   Ctrl+N', 'filecode'], ['new-draw', 'Nuevo dibujo', 'pencil'], ['open', 'Abrir…   Ctrl+O', 'open'], ['open-folder', 'Abrir carpeta…   Ctrl+Mayús+O', 'folder'], ['save', 'Guardar   Ctrl+S', 'save'], ['saveas', 'Guardar como…', 'saveas'], ['close', 'Cerrar documento   Ctrl+W', 'open'], ['plugins', 'Plugins…', 'puzzle'], ['palette', 'Paleta de comandos   Ctrl+Mayús+P', 'search'], ['about', 'Acerca de…', 'info'],
   ].map(([c, l, i]) => `<button type="button" data-cmd="${c}">${icon(i, 16)}<span>${l}</span></button>`).join('');
   document.body.append(fileMenu);
 
