@@ -412,7 +412,9 @@ button.status-item:hover { background: var(--bg-3); color: var(--text); }
 #tabs .tab[hidden] { display: none; }
 #float-note { position: fixed; left: 50%; bottom: 32px; z-index: 40; transform: translate(-50%, 8px); padding: 8px 16px; border-radius: var(--r-l); background: var(--accent); color: var(--on-accent); box-shadow: var(--shadow-pop); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
 #float-note.on { opacity: 1; transform: translate(-50%, 0); }
-#focus-exit { display: none; position: fixed; top: 16px; right: 16px; z-index: 40; width: 32px; height: 32px; border: 1px solid var(--border); border-radius: var(--r-l); background: var(--bg); color: var(--text); box-shadow: var(--shadow-pop); opacity: .6; }
-#focus-exit:hover { opacity: 1; background: var(--accent-soft); }
+#focus-exit { display: none; position: fixed; top: 16px; right: 16px; z-index: 40; width: 32px; height: 32px; border: 0; border-radius: var(--r-l); background: #c42b1c; color: #fff; box-shadow: var(--shadow-pop); }
+#focus-exit:hover { background: #a82314; }
+/* El dibujo trae su botón de salir; en modo zen sus herramientas se ocultan y vuelve el fijo. */
+body.draw-active:not(.draw-zen) #focus-exit { display: none !important; }
 body.focus #focus-exit { display: flex; align-items: center; justify-content: center; }
 body.focus #titlebar, body.focus #tabs, body.focus #panels, body.focus #sidebar, body.focus #splitter, body.focus #doctabs, body.focus #statusbar, body.focus #banner { display: none; }

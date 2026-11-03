@@ -20,6 +20,14 @@ const menu = () =>
     h(MainMenu.DefaultItems.ChangeCanvasBackground),
     h(MainMenu.DefaultItems.Help));
 
+// En pantalla completa, el botón de salir va en la propia zona superior derecha de Excalidraw, a la derecha
+// del botón Biblioteca, para que nunca se superpongan.
+const salirPantallaCompleta = () =>
+  document.fullscreenElement
+    ? h('button', { type: 'button', className: 'plumd-exit', title: 'Salir de pantalla completa (F11)', onClick: () => document.exitFullscreen() },
+        h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2.5, strokeLinecap: 'round' }, h('path', { d: 'M6 6l12 12 M18 6L6 18' })))
+    : null;
+
 window.PluMdDraw = {
   mount(el) {
     if (!root) root = createRoot(el);
@@ -40,6 +48,7 @@ window.PluMdDraw = {
       zenModeEnabled: !!modos.zen,
       viewModeEnabled: !!modos.lectura,
       onChange,
+      renderTopRightUI: () => salirPantallaCompleta(), // función nueva en cada pintado: así Excalidraw la vuelve a evaluar
       UIOptions: { canvasActions: { loadScene: false, saveToActiveFile: false, toggleTheme: false } },
     }, menu()));
   },

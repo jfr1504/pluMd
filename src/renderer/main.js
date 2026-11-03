@@ -296,6 +296,8 @@ function activate(doc) {
   $('editor').hidden = isDraw;
   $('draw').hidden = !isDraw;
   ribbon?.setDrawContext(isDraw);
+  document.body.classList.toggle('draw-active', isDraw);
+  if (!isDraw) document.body.classList.remove('draw-zen');
   if (!isDraw) { lastText = doc; showZoom(state.zoom); }
   // La carpeta base se fija antes de montar el estado para que las imágenes relativas se resuelvan bien.
   setBaseDir(doc.file ? dirname(doc.file) : null);
@@ -338,6 +340,7 @@ function showDraw(doc) {
     if (doc === cur) {
       const m = dibujo.sincronizar(appState);
       ribbon.setActive({ 'draw-grid': m.rejilla, 'draw-zen': m.zen, 'draw-readonly': m.lectura });
+      document.body.classList.toggle('draw-zen', m.zen);
       showZoom(m.zoom);
     }
   }).catch((e) => toast(`No se pudo abrir el dibujo: ${e.message}`, true));
@@ -525,7 +528,7 @@ function refreshAppearance() {
   const skin = root.dataset.skin || 'plumd';
   const theme = root.dataset.theme || 'light';
   setScope(skin, theme);
-  dibujo.actualizarTema();
+  dibujo.repintar();
   const active = { 'theme-light': theme === 'light', 'theme-dark': theme === 'dark' };
   for (const k of listSkins()) active[`skin-${k.id}`] = k.id === skin;
   ribbon.setActive(active);
@@ -841,6 +844,7 @@ document.addEventListener('fullscreenchange', () => {
   const on = !!document.fullscreenElement;
   document.body.classList.toggle('focus', on);
   ribbon.setActive({ fullscreen: on });
+  dibujo.repintar(); // el botón de salir del lienzo depende de la pantalla completa
 });
 $('focus-exit').addEventListener('click', () => toggleFullscreen());
 window.addEventListener('keydown', (e) => {

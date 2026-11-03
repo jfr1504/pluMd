@@ -43,8 +43,8 @@ export async function mostrar(contenedor, doc, onChange) {
   pintar();
 }
 
-// El modo claro/oscuro de la aplicación manda sobre el lienzo.
-export function actualizarTema() {
+// Repinta el lienzo con el estado actual: tema claro/oscuro de la aplicación y pantalla completa.
+export function repintar() {
   if (actual && window.PluMdDraw) pintar();
 }
 
