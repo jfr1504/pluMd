@@ -1,80 +1,95 @@
-<p align="center"><img src="assets/logo.png" alt="Logo de PluMd" width="128"></p>
+<p align="center"><img src="assets/logo.png" alt="PluMd logo" width="128"></p>
+
+<p align="center">English | <a href="README.es.md">Español</a></p>
 
 # PluMd
 
-Editor y visor de ficheros Markdown (`.md`) para Windows y Linux, con cinta de opciones tipo Word. Pensado como primer servicio de una plataforma de herramientas internas con arquitectura de plugins.
+Markdown (`.md`) editor and viewer for Windows and Linux, with a Word-style ribbon. It is the first service of a platform of internal tools built around plugins.
 
-<p align="center"><img src="docs/screenshots/plumd-oscuro.png" alt="PluMd con el panel de carpetas, pestañas de documentos y la cinta de opciones, en modo oscuro"></p>
+The interface is in Spanish. Menu and button names below are given as they appear in the app, with their meaning in brackets.
 
-## Descargar
+<p align="center"><img src="docs/screenshots/plumd-oscuro.png" alt="PluMd with the folder panel, document tabs and the ribbon, in dark mode"></p>
 
-Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest) y descarga el paquete de tu sistema:
+## Download
 
-- **Windows:** `PluMd-Setup-X.Y.Z.exe` (instalador, registra los `.md`) o `PluMd-portable-X.Y.Z.exe`.
-- **Linux:** `PluMd-X.Y.Z-x86_64.AppImage` (portable) o `PluMd-X.Y.Z-amd64.deb` (Debian/Ubuntu; integra los tipos `.md` y `.markdown` con el escritorio).
+Go to the [releases](https://github.com/jfr1504/pluMd/releases/latest) page and download `PluMd-Setup-X.Y.Z.exe` (installer, registers `.md` files) or `PluMd-portable-X.Y.Z.exe` (no installation, runs with a double click).
 
-- Windows SmartScreen puede mostrar "Windows protegió su PC", porque el programa aún no está firmado. Pulsa "Más información" y luego "Ejecutar de todos modos".
-- En Linux, puede ser necesario marcar el AppImage como ejecutable (`chmod +x PluMd-*.AppImage`); necesita compatibilidad FUSE 2. Si el sistema no la tiene, usa el `.deb`.
-- Cada versión incluye `SHA256SUMS.txt` para comprobar los ficheros descargados. Los paquetes los compila GitHub a partir del código de este repositorio.
-- En Windows, el portable no registra por sí solo los `.md` como suyos. Para abrirlos con doble clic, usa "Abrir con" sobre un `.md` una vez y elige PluMd, o instala con el instalador.
+- Windows SmartScreen may show "Windows protected your PC", because the program is not signed yet. Click "More info" and then "Run anyway".
+- Each release includes `SHA256SUMS.txt` to check that the downloaded file is the published one. GitHub builds the `.exe` files from the code in this repository.
+- The portable version does not register `.md` files by itself. To open them with a double click, use "Open with" on a `.md` file once and choose PluMd, or use the installer.
 
-## Qué hace
+## Linux
 
-- Abre un fichero `.md` suelto (doble clic, botón Abrir o Ctrl+O). No necesita carpeta de trabajo.
-- Dos vistas: Lectura (documento limpio y editable, sin símbolos Markdown) y Código (el Markdown tal cual). Ctrl+E alterna.
-- Cinta de opciones a todo el ancho, con pestañas Inicio, Insertar, Vista y Ayuda: estilos de título, negrita, cursiva, subrayado, listas, tareas, tablas editables (el ancho de las columnas se ajusta arrastrando el borde de la cabecera y el texto se ajusta a la celda), imágenes, vínculos (a páginas web o a carpetas, incluidas las de red), bloques de código con resaltado, búsqueda y zoom. Al escribir `/` en el editor se abre un menú de comandos para insertar títulos, listas, tablas y más.
-- Pegar imágenes: Ctrl+V con una captura en el portapapeles la guarda en `imagenes/aammdd_hhmm.png` junto al documento y deja el vínculo. El documento debe estar guardado. Las imágenes remotas (https) no se cargan hasta pulsar «Cargar» en cada una.
-- Varios documentos a la vez en pestañas. Se abren con Abrir, con doble clic o arrastrando los `.md` sobre la ventana. Se pueden cerrar todas; sin documentos abiertos aparece una pantalla con Nuevo y Abrir.
-- Panel de carpetas a la izquierda, abierto por defecto (se cierra con la cruz y se vuelve a abrir desde Vista) (Archivo > Abrir carpeta, o arrastrando una carpeta): muestra los `.md`, `.markdown` y `.txt`, se abren en pestaña con un clic y se recuerda la última carpeta. Escribir una ruta (`C:\Datos`, `\\servidor\recurso` o `/home/usuario/documentos`) en la caja del panel y pulsar Intro abre el diálogo de carpeta ya situado en ella. Con el botón derecho: nuevo documento, renombrar, copiar, pegar y borrar. Borrar envía a la Papelera con confirmación; en unidades de red de Windows no hay Papelera, así que pide una confirmación aparte y el borrado es definitivo; nada se sobrescribe y solo se actúa dentro de la carpeta abierta.
-- Los títulos se pueden contraer con la flecha de su izquierda, como en Obsidian.
-- Tres aspectos (PluMd, Windows y Mac), cada uno en modo claro y oscuro (Vista > Aspecto). Solo cambian el aspecto, no la distribución. Los skins son hojas CSS con un registro (`src/renderer/skins.js`), pensado para que los futuros plugins añadan los suyos.
-- Colores personalizables para títulos, negrita, texto, vínculos y más (Vista > Personalizar colores).
-- Plugins: se pueden añadir aspectos, botones y grupos de cinta, comandos (con paleta Ctrl+Mayús+P), paneles laterales, bloques de código con contenido propio, extensiones del editor y ajustes. Se gestionan en Ayuda > Administrar plugins. Guía para escribir uno en [docs/plugins/README.md](docs/plugins/README.md) y ejemplos en [plugins-ejemplo/](plugins-ejemplo/).
-- Solo toca tus ficheros cuando se lo pides: al guardar, al pegar una imagen (crea `imagenes/`), o al crear, renombrar, copiar o borrar desde el panel. Avisa si un fichero cambió en disco desde que se abrió y no lo sobrescribe sin preguntar.
+Download `PluMd-X.Y.Z-x86_64.AppImage` or `PluMd-X.Y.Z-amd64.deb` from the releases. The AppImage needs executable permissions (`chmod +x PluMd-*.AppImage`) and FUSE 2 compatibility; use the `.deb` if FUSE is unavailable.
 
-## Capturas
+On Ubuntu 24.04 and later, AppArmor may prevent the AppImage from starting by restricting the user namespaces required by Electron's sandbox, even with FUSE installed. See the [Ubuntu documentation](https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/) to configure an application-specific profile. Do not disable Electron's sandbox or the global AppArmor restrictions.
 
-| Windows, modo claro | Mac, modo oscuro |
+NFS/SMB/sshfs mounts are not yet detected as network drives: `/proc/mounts` is not inspected. On Linux, deleting a document always attempts to use the desktop Trash; if that fails, the error is shown and there is no permanent-delete fallback. Folder deletion from PluMd is disabled because the mount cannot be confirmed as a fixed disk; use the file manager.
+
+## Features
+
+- Opens a single `.md` file (double click, Abrir [Open] button or Ctrl+O). No working folder needed.
+- Two views: Lectura [Reading], a clean editable document without Markdown symbols, and Código [Code], the raw Markdown. Ctrl+E switches between them.
+- Full-width ribbon with the Inicio [Home], Insertar [Insert], Vista [View] and Ayuda [Help] tabs: heading styles, bold, italic, underline, lists, tasks, editable tables (drag the header border to resize a column; text wraps inside the cell), images, links (to web pages or to folders, including network shares), code blocks with highlighting, search and zoom. Typing `/` in the editor opens a command menu to insert headings, lists, tables and more.
+- Pasting images: Ctrl+V with a screenshot on the clipboard saves it as `imagenes/yymmdd_hhmm.png` next to the document and inserts the link. The document must be saved first. Remote images (https) are not loaded until you click «Cargar» [Load] on each one.
+- Several documents at once in tabs. Open them with Abrir, with a double click or by dragging `.md` files onto the window. All tabs can be closed; with no documents open, a screen offers Nuevo [New] and Abrir.
+- Folder panel on the left, open by default (close it with the cross and reopen it from Vista; open a folder with Archivo > Abrir carpeta [File > Open folder] or by dragging it in). It shows `.md`, `.markdown` and `.txt` files, opens them in a tab with one click and remembers the last folder. Typing a path (`C:\Data` or `\\server\share`) in the panel box and pressing Enter opens the folder dialog already placed there. Right click offers new document, new folder, rename, copy, duplicate, paste, copy path or name, and delete. Delete sends the file to the Recycle Bin after a confirmation; Windows network drives have no Recycle Bin, so a separate confirmation is required and the deletion is permanent. A folder can only be deleted if it is empty or holds nothing but `.md`, `.markdown` and `.txt` files (and subfolders with the same), and only on a fixed disk; it goes to the Recycle Bin after a confirmation. Anything else, hidden files included, must be deleted from the file manager. Nothing is overwritten and nothing is touched outside the open folder.
+- Headings can be collapsed with the arrow on their left, as in Obsidian.
+- Right-click menus: in the editor (cut, copy, paste, formatting, convert to heading, list or quote), on links, images, tables (insert and delete rows and columns, align), code blocks (copy, change language) and headings (collapse the section); on the tabs (close, copy path); and in the folder panel.
+- Three looks (PluMd, Windows and Mac), each in light and dark mode (Vista > Aspecto [View > Look]). They change the appearance only, not the layout. Skins are CSS sheets with a registry (`src/renderer/skins.js`), so future plugins can add their own.
+- Custom colours for headings, bold, text, links and more (Vista > Personalizar colores [View > Custom colours]).
+- Plugins can add looks, ribbon buttons and groups, commands (with a palette, Ctrl+Shift+P), side panels, code blocks with their own content, editor extensions and settings. They are managed in Ayuda > Administrar plugins [Help > Manage plugins]. The guide for writing one is in [docs/plugins/README.md](docs/plugins/README.md) (in Spanish) and there are examples in [plugins-ejemplo/](plugins-ejemplo/).
+- It only touches your files when you ask: when saving, when pasting an image (it creates `imagenes/`), or when creating, renaming, copying or deleting from the panel. It warns if a file changed on disk since it was opened and does not overwrite it without asking.
+
+## Screenshots
+
+| Windows, light mode | Mac, dark mode |
 | --- | --- |
-| <img src="docs/screenshots/windows-claro.png" alt="Aspecto Windows en modo claro"> | <img src="docs/screenshots/mac-oscuro.png" alt="Aspecto Mac en modo oscuro"> |
+| <img src="docs/screenshots/windows-claro.png" alt="Windows look in light mode"> | <img src="docs/screenshots/mac-oscuro.png" alt="Mac look in dark mode"> |
 
-Los documentos de las capturas son ficticios.
+The documents in the screenshots are fictitious.
 
-## Desarrollo
+## Development
 
-Requisitos: Node.js 24 o superior.
+Requirements: Node.js 24 or later.
 
 ```bash
 npm install
-npm start          # compila y abre la aplicación
-npm test           # pruebas del acceso a ficheros, el pegado de imágenes y el modelo de tablas
-npm run dist       # genera el instalador y el portable de Windows en release/
-npm run dist:linux # genera AppImage y .deb de Linux en release/
+npm start          # builds and opens the app
+npm test           # tests for file access, image pasting and the table model
+npm run dist       # builds the installer and the portable version in release/
+npm run dist:linux # builds AppImage and .deb packages in release/
 ```
 
-## Estructura
+Windows drive detection and folder deletion tests run only on Windows (`npm test`); Linux tests run on Linux. PR CI builds and tests both platforms.
 
-- `src/main/`: proceso principal de Electron (ventana, ficheros, portapapeles). `acceso.js` guarda las rutas reales, los accesos autorizados y la escritura atómica; `fsops.js` las operaciones del panel de carpetas.
-- `tests/`: pruebas con `node:test`, que se ejecutan también en cada Pull Request.
-- `src/renderer/`: interfaz (editor CodeMirror 6, cinta, tablas, imágenes, diálogos, panel de carpetas, skins).
-- `src/renderer/plugins/` y `src/main/plugins.js`: sistema de plugins (registros, API, cargador, pantalla de plugins).
-- `plugins-ejemplo/` y `docs/`: plugins de ejemplo y documentación.
-- `scripts/build.js`: empaquetado del renderer con esbuild.
-- `.github/workflows/`: compilación de los paquetes para Windows y Linux y publicación al crear una etiqueta `vX.Y.Z`.
+Packaging includes all of `dist/**`, including bundles and fonts. After integrating PR #14 (Excalidraw), check that its build generates `draw.js` and fonts under `dist/` and that both are present in the Linux package.
 
-## Estado
+## Structure
 
-Versión de trabajo. Las operaciones con ficheros comprueban siempre la ruta real (sin seguir enlaces fuera de la carpeta abierta), solo se lee y guarda lo que el usuario eligió o está en la carpeta abierta, y el guardado es atómico. El instalador y el portable aún no están firmados. El sistema de plugins está en su primera versión (API 1). Pendiente: tipos de fichero y pestañas con editor propio para plugins, conexión MCP para agentes y un catálogo de plugins.
+- `src/main/`: Electron main process (window, files, clipboard). `acceso.js` handles real paths, authorized access and atomic writes; `fsops.js` the folder panel operations.
+- `src/renderer/`: interface (CodeMirror 6 editor, ribbon, tables, images, dialogs, folder panel, skins).
+- `src/renderer/plugins/` and `src/main/plugins.js`: plugin system (registries, API, loader, plugin screen).
+- `plugins-ejemplo/` and `docs/`: example plugins and documentation.
+- `tests/`: tests with `node:test`, also run on every Pull Request.
+- `scripts/build.js`: renderer bundling with esbuild.
+- `.github/workflows/`: builds the installer and the portable version on GitHub and publishes a release when a `vX.Y.Z` tag is created.
 
-## Colaborar
+Code comments and some file names are in Spanish.
 
-Las propuestas de cambio (Pull Requests) y los avisos de errores (Issues) son bienvenidos. Las normas están en [CONTRIBUTING.md](CONTRIBUTING.md).
+## Status
 
-## Licencia
+Work in progress. File operations always check the real path (links leading outside the open folder are not followed), only files the user chose or that are inside the open folder are read and saved, and saving is atomic. The installer and the portable version are not signed yet. The plugin system is in its first version (API 1). Pending: file types and tabs with their own editor for plugins, an MCP connection for agents and a plugin catalogue.
+
+## Contributing
+
+Pull Requests and Issues are welcome, in English or Spanish. The guidelines are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Licence
 
 [MIT](LICENSE) © 2026 Jorge Ferreira Rey
 
-## Créditos
+## Credits
 
-- La tipografía Inter del aspecto Mac es de The Inter Project Authors, bajo licencia SIL Open Font License 1.1.
-- Electron, CodeMirror y Lezer, bajo licencia MIT.
+- The Inter typeface used in the Mac look is by The Inter Project Authors, under the SIL Open Font License 1.1.
+- Electron, CodeMirror and Lezer, under the MIT licence.

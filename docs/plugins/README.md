@@ -129,7 +129,20 @@ Cinta. `tab` es el id de una pestaña existente: `home`, `insert`, `view`, `help
 
 Paneles laterales. `mount(el)` recibe el elemento donde dibujar y puede devolver `{ onShow, destroy }`. Cuando hay algún panel de plugin, el panel lateral muestra pestañas: Archivos y los paneles de los plugins.
 
-Menús contextuales. `target` es `explorer-file` o `explorer-folder` (el menú del botón derecho del panel de carpetas). `run` recibe `{ path, isDir }`.
+Menús contextuales (botón derecho). `target` indica dónde aparece la opción:
+
+| `target` | Dónde | `run` recibe |
+| --- | --- | --- |
+| `explorer-file`, `explorer-folder` | Panel de carpetas | `{ path, isDir }` |
+| `editor` | Cualquier punto del editor | `{ path, selection }` |
+| `editor-selection` | Editor, con texto seleccionado | `{ path, selection }` |
+| `editor-link` | Editor, sobre un vínculo | `{ path, selection, url }` |
+| `editor-image` | Editor, sobre una imagen | `{ path, selection, src }` |
+| `editor-code` | Editor, dentro de un bloque de código | `{ path, selection, language }` |
+| `editor-table` | Celda de una tabla | `{ path }` |
+| `tab` | Pestaña de un documento | `{ path }` |
+
+`path` es la ruta del documento, o `null` si aún no está guardado.
 
 ### 5.6 Ficheros
 

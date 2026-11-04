@@ -1,6 +1,6 @@
 {
   "name": "plumd",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Editor y visor de Markdown con cinta tipo Word y plugins",
   "main": "src/main/main.js",
   "scripts": {

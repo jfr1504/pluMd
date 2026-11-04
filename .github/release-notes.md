@@ -1,40 +1,41 @@
-PluMd 0.2.5: tablas con columnas ajustables y texto que se ajusta a la celda, y pestañas que se pueden cerrar todas.
+PluMd 0.2.6: right-click menus in the editor, tables, tabs and folder panel.
 
-## Descarga
+The interface is in Spanish; menu names are given as they appear in the app, with their meaning in brackets. [Versión en español: ver `README.es.md`.]
 
-- `PluMd-Setup-0.2.5.exe`: instalador. Permite elegir la carpeta, crea el acceso en el menú Inicio y registra los `.md` para abrirlos con doble clic.
-- `PluMd-portable-0.2.5.exe`: no necesita instalación. Descárgalo y ejecútalo con doble clic.
-- `SHA256SUMS.txt`: sumas de comprobación de los dos `.exe`. Los ficheros los compila GitHub a partir del código de este repositorio.
+## Download
 
-## Antes de ejecutarlo
+- `PluMd-Setup-0.2.6.exe`: installer. Lets you choose the folder, adds a Start menu shortcut and registers `.md` files so they open with a double click.
+- `PluMd-portable-0.2.6.exe`: no installation needed. Download it and run it with a double click.
+- `SHA256SUMS.txt`: checksums of both `.exe` files. GitHub builds them from the code in this repository.
 
-- Windows SmartScreen puede mostrar "Windows protegió su PC", porque el programa aún no está firmado. Pulsa "Más información" y luego "Ejecutar de todos modos".
-- El portable no registra los `.md` como suyos. Para abrirlos con doble clic, usa "Abrir con" sobre un `.md` una vez y elige PluMd, o usa el instalador.
-- Es una versión de trabajo (0.2.5): todavía no hay conexión MCP ni catálogo de plugins.
+## Before running it
 
-## Novedades de la 0.2.5
+- Windows SmartScreen may show "Windows protected your PC", because the program is not signed yet. Click "More info" and then "Run anyway".
+- The portable version does not register `.md` files. To open them with a double click, use "Open with" on a `.md` file once and choose PluMd, or use the installer.
+- This is a work-in-progress version (0.2.6): there is no MCP connection or plugin catalogue yet.
 
-- Tablas: el ancho de las columnas se cambia arrastrando el borde derecho de la cabecera (doble clic para igualar). El ancho se guarda en el propio Markdown como número relativo de guiones de la fila delimitadora, la convención de Pandoc, así que otros visores siguen viendo una tabla normal.
-- Tablas: el texto de las celdas se ajusta al ancho de la columna en vez de cortarse; la fila crece en alto.
-- Pestañas: se pueden cerrar todas. Sin documentos abiertos aparece una pantalla con los botones Nuevo y Abrir, y la numeración de «sin título» vuelve a empezar.
+## New in 0.2.6
 
-## Novedades de la 0.2.1 a la 0.2.4
+- Right-click menus, contributed by @Ohkuninush:
+  - Editor: cut, copy, paste, select all, inline formatting, link and a Convertir en [Convert to] submenu (heading, list, quote). On an empty line, an insert menu.
+  - Links, images, code blocks (copy the code, change the language) and headings (collapse the section).
+  - Tables: insert and delete rows and columns, align a column, delete the table.
+  - Document tabs: close, close others, close to the right, close all, copy the path, show in Windows Explorer.
+  - Folder panel: new folder, duplicate, copy the path or the name, delete a folder.
+- Deleting a folder sends it to the Recycle Bin, and only if it is empty or holds nothing but `.md`, `.markdown` and `.txt` files (and subfolders with the same), on a fixed disk. Anything the panel does not show (other file types, hidden files, links) blocks the deletion, and the message says how many such files there are. Folders on network or removable drives are not deleted from PluMd.
+- Copying an image or showing it in Explorer requires a saved document that PluMd is allowed to open.
+- Plugins can add entries to the new menus (`contextMenu` targets `editor`, `editor-selection`, `editor-link`, `editor-image`, `editor-code`, `editor-table` and `tab`). See `docs/plugins/README.md`.
+- Documentation: the README is now in English, with the Spanish version in `README.es.md`.
 
-- Instalador de Windows (NSIS) junto al portable.
-- Pegar imágenes: Ctrl+V con una captura la guarda en `imagenes/aammdd_hhmm.png` junto al documento y deja el vínculo. El documento debe estar guardado.
-- Panel de carpetas: escribir una ruta en la caja y pulsar Intro abre el diálogo de carpeta ya situado en ella (por ejemplo `C:\Datos` o `\\servidor\recurso`).
-- Seguridad: las junctions y enlaces que salen de la carpeta abierta no se listan ni se usan; leer y guardar solo funciona sobre ficheros elegidos por el usuario o de la carpeta abierta (también para plugins); guardado atómico con aviso de error; imágenes remotas bloqueadas hasta pulsar «Cargar».
-- Borrar en una unidad de red es posible con una confirmación aparte que avisa de que es definitivo (no hay Papelera). En local va a la Papelera.
-- Pruebas automáticas (`npm test`) en cada Pull Request.
+## Earlier changes (0.2.1 to 0.2.5)
 
-## Qué incluye
+- Windows installer (NSIS) alongside the portable version.
+- Tables: drag the header border to resize a column (double click to make them equal); the width is kept in the Markdown itself as dash counts in the delimiter row, the Pandoc convention. Cell text wraps instead of being cut.
+- Tabs: all of them can be closed; with no documents open, a screen offers Nuevo [New] and Abrir [Open].
+- Pasting images: Ctrl+V with a screenshot saves it as `imagenes/yymmdd_hhmm.png` next to the document and inserts the link. The document must be saved first.
+- Folder panel: typing a path in the box and pressing Enter opens the folder dialog already placed there (for example `C:\Data` or `\\server\share`).
+- Security: junctions and links leading outside the open folder are not listed or used; reading and saving only work on files chosen by the user or inside the open folder (plugins included); atomic saving with an error warning; remote images blocked until you click «Cargar» [Load].
+- Deleting a file on a network drive is possible after a separate confirmation warning that it is permanent (there is no Recycle Bin). On local drives it goes to the Recycle Bin.
+- Automated tests (`npm test`) on every Pull Request.
 
-- Vista de lectura editable, sin símbolos Markdown, y vista de código.
-- Cinta de opciones a todo el ancho: estilos de título, formato, listas, tareas, tablas editables, imágenes, vínculos, bloques de código con resaltado y búsqueda.
-- Sistema de plugins (aspectos, comandos, cinta, paneles, extensiones del editor y ajustes) que se gestiona en Ayuda > Administrar plugins. Guía en `docs/plugins/README.md`.
-- Paleta de comandos (Ctrl+Mayús+P) y menú `/` en el editor.
-- Pestañas de documentos y panel de carpetas con menú de botón derecho (nuevo, renombrar, copiar, pegar y borrar).
-- Vínculos a carpetas locales o de red, además de páginas web.
-- Títulos plegables, colores personalizables y tres aspectos (PluMd, Windows y Mac) en modo claro y oscuro.
-
-Licencia MIT.
+MIT licence.

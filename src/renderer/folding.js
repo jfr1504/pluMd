@@ -1,5 +1,5 @@
 import { foldService, foldGutter, codeFolding, foldKeymap, syntaxTree } from '@codemirror/language';
-import { foldEffect, unfoldAll } from '@codemirror/language';
+import { foldEffect, unfoldEffect, unfoldAll, foldedRanges } from '@codemirror/language';
 
 // Sección de un título: desde el final de su línea hasta justo antes del siguiente título
 // del mismo nivel o superior (o hasta el final del documento).
@@ -36,6 +36,23 @@ export function foldAllHeadings(view) {
 }
 
 export const expandAll = (view) => unfoldAll(view);
+
+// Sección del título que hay en la línea de `pos`: { range, folded }, o null si no es un título con contenido debajo.
+export function sectionAt(state, pos) {
+  const range = sectionRange(state, state.doc.lineAt(pos).from);
+  if (!range) return null;
+  let folded = false;
+  foldedRanges(state).between(range.from, range.from, (from) => { if (from === range.from) folded = true; });
+  return { range, folded };
+}
+
+// Contrae o expande la sección del título de la línea de `pos`.
+export function toggleSection(view, pos) {
+  const s = sectionAt(view.state, pos);
+  if (!s) return;
+  view.dispatch({ effects: (s.folded ? unfoldEffect : foldEffect).of(s.range) });
+  view.focus();
+}
 
 function arrow(open) {
   const s = document.createElement('span');

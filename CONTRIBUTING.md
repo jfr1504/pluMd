@@ -1,34 +1,34 @@
-# Cómo colaborar
+# Contributing
 
-Gracias por el interés en PluMd. Se aceptan errores, ideas y cambios de código.
+Thanks for your interest in PluMd. Bug reports, ideas and code changes are welcome, in English or Spanish (se aceptan también en español).
 
-## Avisar de un error o proponer una mejora
+## Reporting a bug or suggesting an improvement
 
-Abre un "Issue" en GitHub. Indica qué hacías, qué esperabas que pasara y qué pasó. Si el problema es con un fichero `.md` concreto, adjunta un ejemplo mínimo que lo reproduzca (sin datos privados).
+Open an Issue on GitHub. Say what you were doing, what you expected to happen and what happened. If the problem involves a specific `.md` file, attach a minimal example that reproduces it (without private data).
 
-## Proponer un cambio de código (Pull Request)
+## Proposing a code change (Pull Request)
 
-1. Haz un "fork" del repositorio y clónalo.
-2. Crea una rama para tu cambio, por ejemplo `mejora-tablas`.
-3. Instala y ejecuta la aplicación:
+1. Fork the repository and clone it.
+2. Create a branch for your change, for example `table-improvement`.
+3. Install and run the app:
 
    ```bash
    npm install
    npm start
    ```
 
-4. Haz el cambio. Mantén el estilo del código que ya hay: mismos nombres, mismo nivel de comentarios y comentarios en español.
-5. Comprueba que la aplicación arranca y que lo que has tocado funciona, y ejecuta `npm test`: las pruebas también se ejecutan en cada Pull Request. Si cambias el comportamiento del editor, prueba también el modo Lectura y el modo Código.
-6. Abre un Pull Request describiendo qué cambia y por qué. Un cambio pequeño y enfocado se revisa antes que uno grande.
+4. Make the change. Follow the style of the existing code: same naming, same amount of comments. Code comments are in Spanish; write new ones in Spanish if you can, otherwise in English.
+5. Check that the app starts and that what you changed works, and run `npm test`: the tests also run on every Pull Request. If you change editor behaviour, test both the Lectura [Reading] and Código [Code] views.
+6. Open a Pull Request describing what changes and why. A small, focused change is reviewed sooner than a large one.
 
-El responsable del proyecto revisa cada Pull Request antes de aceptarlo y puede pedir ajustes.
+The maintainer reviews every Pull Request before accepting it and may ask for changes.
 
-## Qué no incluir en un Pull Request
+## What not to include in a Pull Request
 
-- Ficheros generados: `node_modules/`, `dist/` y `release/` están excluidos a propósito.
-- Datos personales, contraseñas, claves o rutas de tu equipo.
-- Código copiado de otros proyectos sin indicar su origen y su licencia.
+- Generated files: `node_modules/`, `dist/` and `release/` are excluded on purpose.
+- Personal data, passwords, keys or paths from your computer.
+- Code copied from other projects without stating its origin and licence.
 
-## Licencia
+## Licence
 
-Al enviar un cambio aceptas que se publique bajo la licencia MIT del proyecto (ver `LICENSE`).
+By submitting a change you agree that it is published under the project's MIT licence (see `LICENSE`).

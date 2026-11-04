@@ -32,7 +32,7 @@ export function resolveImageSrc(src) {
       (window.api.platform !== 'win32' && src.startsWith('/'))) return fileUrl(src);
   if (!baseDir) return null;
   try {
-    return new URL(src, fileUrl(baseDir) + '/').href;
+    return new URL(src, fileUrl(baseDir).replace(/\/?$/, '/')).href;
   } catch {
     return null;
   }
@@ -55,6 +55,7 @@ export function relativeTo(mdPath, target) {
   const a = base.slice(fromRoot.length).split('/').filter(Boolean);
   const b = destination.slice(toRoot.length).split('/').filter(Boolean);
   let i = 0;
-  while (i < a.length && i < b.length && fold(a[i]) === fold(b[i])) i++;
+  // El último segmento de destino es el fichero, incluso si coincide con una carpeta de origen.
+  while (i < a.length && i < b.length - 1 && fold(a[i]) === fold(b[i])) i++;
   return [...Array(a.length - i).fill('..'), ...b.slice(i)].join('/');
 }
