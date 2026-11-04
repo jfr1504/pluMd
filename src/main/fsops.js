@@ -297,7 +297,10 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
         await trash(p);
         return { ok: true };
       } catch (e) {
-        return fail(e.message);
+        const error = e.message.startsWith('Failed to move item to trash')
+        ? 'No se ha podido mover el elemento a la Papelera.'
+        : e.message;
+        return fail(error);
       }
     },
   };

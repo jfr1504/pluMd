@@ -104,7 +104,10 @@ const guard = (fn) => async (_e, ...args) => {
   try {
     return await fn(...args);
   } catch (e) {
-    return { ok: false, error: e.message };
+    const error = e.message.startsWith('Failed to move item to trash')
+    ? 'No se ha podido mover el elemento a la Papelera.'
+    : e.message;
+    return { ok: false, error: error };
   }
 };
 
