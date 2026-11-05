@@ -102,19 +102,7 @@
         "AppImage",
         "deb"
       ],
-      "fileAssociations": [
-        {
-          "ext": "md",
-          "name": "Documento Markdown",
-          "description": "Documento Markdown",
-          "mimeType": "text/markdown"
-        },
-        {
-          "ext": "markdown",
-          "name": "Documento Markdown",
-          "mimeType": "text/markdown"
-        }
-      ],
+      "mimeTypes": ["text/markdown"],
       "artifactName": "PluMd-${version}-${arch}.${ext}"
     },
     "deb": {

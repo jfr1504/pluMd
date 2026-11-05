@@ -4,6 +4,7 @@ const path = require('path');
 const { createFsOps } = require('./fsops');
 const { MD_RE, DENIED, createAccess, writeAtomic, savePastedImage, resolveImagePath } = require('./acceso');
 const { readClipboardPng } = require('./portapapeles');
+const { fileFromArgs } = require('./open-args');
 const { createPlugins, registerScheme } = require('./plugins');
 
 // El esquema plumd-plugin:// (ficheros de los plugins) debe registrarse antes de que la app esté lista.
@@ -15,11 +16,6 @@ if (!gotLock) app.quit();
 
 let win = null;
 let pendingFile = null;
-
-function fileFromArgs(argv) {
-  const args = app.isPackaged ? argv.slice(1) : argv.slice(2);
-  return args.find((a) => !a.startsWith('-') && /\.(md|markdown|txt)$/i.test(a) && fs.existsSync(a)) || null;
-}
 
 async function sendOpen(file) {
   if (access) await access.allowFile(file);
@@ -68,7 +64,7 @@ function createWindow() {
 }
 
 app.on('second-instance', (_e, argv) => {
-  const f = fileFromArgs(argv);
+  const f = fileFromArgs(argv, app.isPackaged);
   if (win) {
     if (win.isMinimized()) win.restore();
     win.focus();
@@ -89,7 +85,7 @@ app.whenReady().then(() => {
   access = createAccess({ storeFile: path.join(app.getPath('userData'), 'carpetas.json') });
   plugins = createPlugins({ userDataDir: app.getPath('userData'), argv: process.argv });
   plugins.installProtocol(protocol, net);
-  pendingFile = fileFromArgs(process.argv);
+  pendingFile = fileFromArgs(process.argv, app.isPackaged);
   if (pendingFile) access.allowFile(pendingFile);
   createWindow();
 });
