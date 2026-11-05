@@ -11,7 +11,9 @@ const store = {
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } },
 };
 
-const NOT_FIXED_MSG = 'Solo se pueden borrar carpetas en discos fijos. Bórrala desde el gestor de archivos.';
+const NOT_FIXED_MSG = window.api.platform === 'linux'
+  ? 'El borrado de carpetas no está disponible en Linux. Bórrala desde el gestor de archivos.'
+  : 'Solo se pueden borrar carpetas en discos fijos. Bórrala desde el gestor de archivos.';
 
 const base = (p) => p.split(/[\\/]/).pop();
 const parent = (p) => {

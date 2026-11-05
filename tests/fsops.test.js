@@ -351,7 +351,14 @@ test('Linux no da por fijo un montaje desconocido ni borra carpetas', { skip: pr
     assert.equal(root.network, false);
     const dir = path.join(t.root, 'carpeta');
     fs.mkdirSync(dir);
-    assert.deepEqual(await t.ops.removeDir(dir), { ok: false, error: msg.notFixed });
+    const expected = {
+      ok: false,
+      error: process.platform === 'linux'
+        ? 'El borrado de carpetas no está disponible en Linux. Bórrala desde el gestor de archivos.'
+        : msg.notFixed,
+    };
+    assert.deepEqual(await t.ops.canRemoveDir(dir), expected);
+    assert.deepEqual(await t.ops.removeDir(dir), expected);
     assert.deepEqual(t.calls.trash, []);
     assert.deepEqual(t.calls.unlink, []);
     assert.equal(fs.existsSync(dir), true);

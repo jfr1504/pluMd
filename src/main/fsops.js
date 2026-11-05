@@ -37,6 +37,7 @@ const msg = {
   isRoot: 'No se puede borrar la carpeta abierta en el panel.',
   linkDir: 'Es un enlace o una unión a otra carpeta: bórrala desde el gestor de archivos.',
   notFixed: 'Solo se pueden borrar carpetas en discos fijos. Bórrala desde el gestor de archivos.',
+  linuxFolders: 'El borrado de carpetas no está disponible en Linux. Bórrala desde el gestor de archivos.',
   hiddenFiles: (n) => `Esta carpeta contiene ${n} ${n === 1 ? 'fichero' : 'ficheros'} que PluMd no muestra (otros tipos, ocultos o enlaces). Bórrala desde el gestor de archivos.`,
   tooBig: 'La carpeta tiene demasiados elementos para comprobarla. Bórrala desde el gestor de archivos.',
   notDir: 'No es una carpeta.',
@@ -144,7 +145,7 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
       if (norm(p) === root.key || norm(real) === root.realKey) return fail(msg.isRoot);
       if ((await fs.promises.lstat(p)).isSymbolicLink()) return fail(msg.linkDir);
       if (!(await fs.promises.stat(real)).isDirectory()) return fail(msg.notDir);
-      if (!(await isFixedDrive(real))) return fail(msg.notFixed);
+      if (!(await isFixedDrive(real))) return fail(platform === 'linux' ? msg.linuxFolders : msg.notFixed);
       const hidden = await countHiddenFiles(real);
       return hidden ? fail(msg.hiddenFiles(hidden)) : null;
     } catch (e) {
