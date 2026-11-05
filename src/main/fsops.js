@@ -110,7 +110,7 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
 
   function cleanName(raw, keepExt) {
     let name = String(raw || '').trim();
-    const invalid = platform === 'win32' ? INVALID_WINDOWS : INVALID_POSIX;
+    const invalid = INVALID_WINDOWS;
     const reserved = platform === 'win32' && RESERVED_WINDOWS.test(name);
     if (!name || name === '.' || name === '..' || invalid.test(name) || reserved || name.length > 200) return null;
     if (!MD_RE.test(name)) name += keepExt || '.md';

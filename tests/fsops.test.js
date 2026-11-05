@@ -43,13 +43,12 @@ test('nombres no válidos o reservados se rechazan', async () => {
   const t = setup();
   try {
     await t.ops.setRoot(t.root);
-    const invalid = ['', '..', 'a/b', 'x'.repeat(250)];
-    if (process.platform === 'win32') invalid.push('a:b', 'con', 'nul.md');
+    const invalid = ['', '..', 'a/b', 'a:b', 'a\\b', 'x'.repeat(250)];
+    if (process.platform === 'win32') invalid.push('con', 'nul.md');
     for (const n of invalid) {
       assert.equal((await t.ops.create(t.root, n)).ok, false, `debería rechazar «${n}»`);
     }
     if (process.platform !== 'win32') {
-      assert.equal((await t.ops.create(t.root, 'a:b')).ok, true);
       assert.equal((await t.ops.create(t.root, 'con')).ok, true);
     }
   } finally {
