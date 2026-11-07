@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' plumd-plugin:; style-src 'self' 'unsafe-inline' plumd-plugin:; img-src 'self' data: file: https: plumd-plugin:; font-src 'self' data: plumd-plugin:; connect-src 'self' plumd-plugin:;" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' plumd-plugin:; style-src 'self' 'unsafe-inline' plumd-plugin:; img-src 'self' data: blob: file: https: plumd-plugin:; font-src 'self' data: plumd-plugin:; connect-src 'self' plumd-plugin:;" />
   <title>PluMd</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="early.js"></script>
@@ -56,16 +56,20 @@
       <div id="banner" hidden></div>
       <main>
         <div id="editor"></div>
+        <div id="draw" hidden></div>
         <div id="no-docs" hidden>
           <p>No hay documentos abiertos.</p>
           <div>
             <button type="button" id="nd-new" class="primary">Nuevo documento (Ctrl+N)</button>
+            <button type="button" id="nd-draw">Nuevo dibujo</button>
             <button type="button" id="nd-open">Abrir fichero… (Ctrl+O)</button>
           </div>
         </div>
       </main>
     </div>
   </div>
+  <div id="float-note" role="status" aria-live="polite"></div>
+  <button type="button" id="focus-exit" class="rb rb-ic" data-icon="close" title="Salir de pantalla completa (F11)"></button>
   <footer id="statusbar">
     <span id="wordcount">0 palabras</span>
     <span id="status-plugins" class="status-plugins"></span>

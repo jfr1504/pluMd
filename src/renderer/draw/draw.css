@@ -1,0 +1,31 @@
+/* Colorimetría de Excalidraw: toma los colores de PluMd (variables de styles.css) para que el lienzo
+   cambie con el skin y con el modo claro/oscuro. Espaciados en múltiplos de 4 px (4, 8, 16, 24). */
+#draw .excalidraw,
+#draw .excalidraw.theme--dark {
+  --color-primary: var(--accent);
+  --color-primary-darker: var(--accent);
+  --color-primary-darkest: var(--accent);
+  --color-primary-light: var(--accent-soft);
+  --color-primary-light-darker: var(--accent-soft);
+  --text-primary-color: var(--text);
+  --island-bg-color: var(--bg);
+  --popup-bg-color: var(--bg);
+  --popup-secondary-bg-color: var(--bg-3);
+  --default-border-color: var(--border);
+  --input-border-color: var(--border);
+  --button-gray-1: var(--bg-3);
+  --button-gray-2: var(--border);
+  --button-hover-bg: var(--bg-3);
+  --font-family: var(--font-ui);
+  --default-icon-size: 16px;
+  --default-button-size: 32px;
+  --space-factor: 0.5rem; /* 8 px: la base de la rejilla de espaciado de Excalidraw */
+  --sat-offset: 0px;
+}
+#draw .excalidraw .island { border-radius: var(--r-l); }
+#draw .excalidraw .Island { border-radius: var(--r-l); }
+
+/* Botón rojo para salir de pantalla completa (junto al botón Biblioteca; 32 px y 8 px de separación). */
+#draw .plumd-exit { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-left: 8px; padding: 0; border: 0; border-radius: var(--r-l); background: #c42b1c; color: #fff; cursor: pointer; }
+#draw .plumd-exit:hover { background: #a82314; }
+#draw .plumd-exit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

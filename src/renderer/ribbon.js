@@ -61,6 +61,20 @@ const builtinTabs = () => [
       grp('Aspecto', ...listSkins().map((k) => lg(`skin-${k.id}`, k.name, k.icon, k.description, `skin-${k.id}`))),
       grp('Modo', lg('theme-light', 'Claro', 'sun', 'Tema claro', 'theme-light'), lg('theme-dark', 'Oscuro', 'moon', 'Tema oscuro', 'theme-dark')),
       grp('Colores', lg('colors', 'Personalizar colores', 'palette', 'Elegir los colores de títulos, negrita, texto y más')),
+      grp('Pantalla', lg('fullscreen', 'Pantalla completa', 'fullscreen', 'Oculta la cinta y los paneles para ver todo el documento (F11)', 'fullscreen')),
+    ],
+  },
+  // Pestaña contextual: solo aparece cuando el documento activo es un dibujo.
+  {
+    id: 'draw',
+    label: 'Dibujo',
+    contextual: true,
+    groups: [
+      grp('Vista', lg('fullscreen', 'Pantalla completa', 'fullscreen', 'Todo el lienzo disponible (F11)', 'fullscreen'), lg('draw-fit', 'Ver todo', 'fit', 'Ajustar el zoom para ver todo el dibujo')),
+      grp('Zoom', lg('zoom-in', 'Acercar', 'zoomin'), lg('zoom-out', 'Alejar', 'zoomout'), lg('zoom-reset', '100%', 'search', 'Zoom al 100%')),
+      grp('Lienzo', lg('draw-grid', 'Cuadrícula', 'grid', 'Mostrar la cuadrícula y ajustar a ella', 'draw-grid'), lg('draw-zen', 'Zen', 'eyeoff', 'Ocultar las herramientas de Excalidraw (Alt+Z)', 'draw-zen'), lg('draw-readonly', 'Solo lectura', 'lock', 'Bloquear la edición para consultar sin riesgo', 'draw-readonly')),
+      grp('Exportar', lg('draw-export-png', 'PNG', 'image', 'Exportar el dibujo como imagen PNG'), lg('draw-export-svg', 'SVG', 'export', 'Exportar el dibujo como SVG'), lg('draw-insert', 'Insertar en nota', 'insertdraw', 'Guardar el dibujo como imagen e insertarlo en la nota abierta')),
+      grp('Guardado', lg('draw-autosave', 'Automático', 'save', 'Guardar los cambios del dibujo automáticamente', 'draw-autosave'), lg('draw-folder', 'Carpeta', 'folder', 'Carpeta donde se crean los dibujos nuevos (por defecto Descargas)')),
     ],
   },
   {
@@ -105,6 +119,8 @@ export function createRibbon({ run }) {
   let activeTab = 'home';
   let contributions = []; // aportaciones de plugins (registro "ribbon")
   let tabsData = [];
+  let drawContext = false; // ¿el documento activo es un dibujo? Muestra la pestaña contextual «Dibujo»
+  let backTab = 'home'; // pestaña a la que se vuelve al salir de un dibujo
 
   const computeTabs = () => {
     const tabs = builtinTabs();
@@ -151,12 +167,13 @@ export function createRibbon({ run }) {
     hydrateIcons(document);
     tabsBar.querySelectorAll('[data-plugin-tab]').forEach((b) => b.remove());
     const spacer = tabsBar.querySelector('.spacer');
-    for (const t of tabsData.filter((x) => x.plugin)) {
+    for (const t of tabsData.filter((x) => x.plugin || x.contextual)) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'tab';
       b.dataset.tab = t.id;
       b.dataset.pluginTab = '1';
+      b.hidden = !!t.contextual && !drawContext;
       b.textContent = t.label;
       wireTab(b);
       tabsBar.insertBefore(b, spacer);
@@ -172,7 +189,7 @@ export function createRibbon({ run }) {
   fileMenu.className = 'popup menu';
   fileMenu.hidden = true;
   fileMenu.innerHTML = [
-    ['new', 'Nuevo   Ctrl+N', 'filecode'], ['open', 'Abrir…   Ctrl+O', 'open'], ['open-folder', 'Abrir carpeta…   Ctrl+Mayús+O', 'folder'], ['save', 'Guardar   Ctrl+S', 'save'], ['saveas', 'Guardar como…', 'saveas'], ['close', 'Cerrar documento   Ctrl+W', 'open'], ['plugins', 'Plugins…', 'puzzle'], ['palette', 'Paleta de comandos   Ctrl+Mayús+P', 'search'], ['about', 'Acerca de…', 'info'],
+    ['new', 'Nuevo   Ctrl+N', 'filecode'], ['new-draw', 'Nuevo dibujo', 'pencil'], ['open', 'Abrir…   Ctrl+O', 'open'], ['open-folder', 'Abrir carpeta…   Ctrl+Mayús+O', 'folder'], ['save', 'Guardar   Ctrl+S', 'save'], ['saveas', 'Guardar como…', 'saveas'], ['close', 'Cerrar documento   Ctrl+W', 'open'], ['plugins', 'Plugins…', 'puzzle'], ['palette', 'Paleta de comandos   Ctrl+Mayús+P', 'search'], ['about', 'Acerca de…', 'info'],
   ].map(([c, l, i]) => `<button type="button" data-cmd="${c}">${icon(i, 16)}<span>${l}</span></button>`).join('');
   document.body.append(fileMenu);
 
@@ -259,6 +276,19 @@ export function createRibbon({ run }) {
   return {
     showTab,
     entries,
+    // Con un dibujo activo aparece (y se abre) la pestaña «Dibujo»; al salir se vuelve a la anterior.
+    setDrawContext(on) {
+      if (on === drawContext) return;
+      drawContext = on;
+      const b = tabsBar.querySelector('[data-tab="draw"]');
+      if (b) b.hidden = !on;
+      const wasCollapsed = collapsed;
+      if (on) {
+        if (activeTab !== 'draw') backTab = activeTab;
+        showTab('draw');
+      } else if (activeTab === 'draw') showTab(backTab || 'home');
+      setCollapsed(wasCollapsed);
+    },
     setContributions(list) {
       contributions = list;
       render();
