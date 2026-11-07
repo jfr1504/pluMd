@@ -83,3 +83,4 @@ Las propuestas de cambio (Pull Requests) y los avisos de errores (Issues) son bi
 
 - La tipografía Inter del aspecto Mac es de The Inter Project Authors, bajo licencia SIL Open Font License 1.1.
 - Electron, CodeMirror, Lezer, Excalidraw, React y lz-string, bajo licencia MIT.
+- La vista de dibujo de Excalidraw incluye las tipografías que trae `@excalidraw/excalidraw` (Assistant, Cascadia Code, Comic Shanns, Excalifont, Liberation Sans, Lilita One, Nunito y Virgil), cada una con su propia licencia, casi todas SIL Open Font License 1.1.

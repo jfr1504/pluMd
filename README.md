@@ -87,3 +87,4 @@ Pull Requests and Issues are welcome, in English or Spanish. The guidelines are 
 
 - The Inter typeface used in the Mac look is by The Inter Project Authors, under the SIL Open Font License 1.1.
 - Electron, CodeMirror, Lezer, Excalidraw, React and lz-string, under the MIT licence.
+- The Excalidraw drawing view bundles the fonts that come with `@excalidraw/excalidraw` (Assistant, Cascadia Code, Comic Shanns, Excalifont, Liberation Sans, Lilita One, Nunito and Virgil), each under its own licence, mostly SIL Open Font License 1.1.
