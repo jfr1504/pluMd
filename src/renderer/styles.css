@@ -191,8 +191,13 @@ main { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
 .cm-lp-check { margin: 0 6px 0 0; vertical-align: middle; width: 1em; height: 1em; accent-color: var(--accent); cursor: pointer; }
 .cm-lp-done { text-decoration: line-through; color: var(--muted); }
 .cm-lp-hr { display: block; height: 1px; background: var(--border); margin: .4em 0; }
-.cm-lp-img { display: inline-block; max-width: 100%; vertical-align: bottom; cursor: pointer; border-radius: var(--r-s); }
+.cm-lp-img { position: relative; display: inline-block; max-width: 100%; vertical-align: bottom; cursor: grab; border-radius: var(--r-s); }
 .cm-lp-img img { display: block; max-width: 100%; height: auto; border-radius: var(--r-s); }
+.cm-lp-img-grip { position: absolute; right: 8px; bottom: 8px; width: 16px; height: 16px; border: 2px solid var(--on-accent); border-radius: var(--r-s); background: var(--accent); box-shadow: var(--shadow-pop); cursor: nwse-resize; opacity: 0; transition: opacity .15s; }
+.cm-lp-img:hover .cm-lp-img-grip, .cm-lp-img.resizing .cm-lp-img-grip { opacity: 1; }
+.cm-lp-img.dragging { opacity: .5; }
+.cm-lp-drop { position: fixed; z-index: 40; border-radius: 1px; background: var(--accent); pointer-events: none; }
+body.img-dragging, body.img-dragging * { cursor: grabbing !important; user-select: none; }
 .cm-lp-img.broken { color: var(--muted); border: 1px dashed var(--border); padding: 4px 10px; font-size: .85em; }
 .cm-lp-img.blocked { color: var(--muted); border: 1px dashed var(--border); padding: 4px 10px; font-size: .85em; cursor: default; }
 .cm-lp-img.blocked button { margin-left: 6px; font: inherit; cursor: pointer; }
