@@ -21,7 +21,7 @@ The interface is in Spanish; menu names are given as they appear in the app, wit
   - A new drawing is created straight away in your Downloads folder (changeable in the Dibujo [Drawing] tab) and is saved automatically a moment after each change.
   - The Dibujo tab has full screen (F11), grid, zen and read-only modes, fit to content, export to PNG or SVG, and inserting the drawing into the open note as an image in `imagenes/`.
   - The Excalidraw shape library (Biblioteca [Library]) is kept between sessions.
-  - Excalidraw is loaded only when the first drawing is opened, so the editor starts as fast as before. The installer is larger than in earlier versions because it includes Excalidraw.
+  - Excalidraw is loaded only when the first drawing is opened, so the editor starts as fast as before. The installer is about 2.5 MB larger than in 0.2.6 because it includes Excalidraw.
 - Image size and position, also by @Ohkuninush: drag the handle at the bottom-right corner of an image to resize it (double-click it to restore the original size); the width is stored Obsidian-style in the description, `![text|300](path)`. Drag the image itself through the text to move it; Esc cancels.
 
 ## Earlier changes (0.2.1 to 0.2.6)
