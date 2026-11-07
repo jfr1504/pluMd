@@ -12,7 +12,8 @@ import LZString from 'lz-string';
 
 const CABECERA_DATOS = '# Excalidraw Data';
 const TAM_BLOQUE = 256; // el plugin parte el base64 en líneas de 256 caracteres
-const ID_TEXTO = '[A-Za-z0-9_-]{8}';
+// Obsidian usa ids de 8 caracteres y Excalidraw genera los suyos de 21 (o un UUID de 36).
+const ID_TEXTO = '[A-Za-z0-9_-]{8,64}';
 
 const FRONTMATTER = '---\n\nexcalidraw-plugin: parsed\ntags: [excalidraw]\n\n---\n';
 const AVISO = "==⚠  Switch to EXCALIDRAW VIEW in the MORE OPTIONS menu of this document. ⚠== You can decompress Drawing data with the command palette: 'Decompress current Excalidraw file'. For more info check in plugin settings under 'Saving'\n\n\n";

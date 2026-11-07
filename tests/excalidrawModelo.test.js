@@ -94,3 +94,23 @@ test('se reconoce una nota Excalidraw por el nombre o por el frontmatter', async
   assert.equal(esExcalidraw('nota.md', '---\ntags: [a]\n---\n'), false);
   assert.equal(esExcalidraw('nota.md', '# Hola'), false);
 });
+
+test('los ids de texto de Excalidraw (21) y de Obsidian (8) se leen con la edición de la sección', async () => {
+  const { serializeExcalidraw, parseExcalidraw, ESCENA_VACIA } = await modelo();
+  const largo = 'lVsFMQS_er-1gL9-NQdac';
+  const uuid = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
+  const escena = { ...ESCENA_VACIA(), elements: [texto(largo, 'uno'), texto(uuid, 'dos'), texto('cccccccc', 'tres')] };
+  const md = serializeExcalidraw({ escena })
+    .replace(`uno ^${largo}`, `UNO editado ^${largo}`)
+    .replace(`dos ^${uuid}`, `DOS editado ^${uuid}`)
+    .replace('tres ^cccccccc', 'TRES editado ^cccccccc');
+  const leido = parseExcalidraw(md).escena.elements.map((e) => e.text);
+  assert.deepEqual(leido, ['UNO editado', 'DOS editado', 'TRES editado']);
+});
+
+test('un texto que termina en « ^2» no se confunde con un id', async () => {
+  const { serializeExcalidraw, parseExcalidraw, ESCENA_VACIA } = await modelo();
+  const escena = { ...ESCENA_VACIA(), elements: [texto('aaaaaaaa', 'x ^2\n\ny'), texto('bbbbbbbb', 'fin')] };
+  const leido = parseExcalidraw(serializeExcalidraw({ escena })).escena.elements.map((e) => e.text);
+  assert.deepEqual(leido, ['x ^2\n\ny', 'fin']);
+});
