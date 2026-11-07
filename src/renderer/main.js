@@ -28,6 +28,7 @@ import { initSidebarPanels } from './plugins/sidebar.js';
 import { initStatusItems } from './plugins/statusbar.js';
 import { slashMenu } from './slashMenu.js';
 import { esExcalidraw, parseExcalidraw, serializeExcalidraw, ESCENA_VACIA } from './excalidrawModelo.mjs';
+import { trasGuardar } from './guardado.mjs';
 import * as dibujo from './drawView.js';
 
 const $ = (id) => document.getElementById(id);
@@ -353,10 +354,19 @@ function contentOf(d) {
   return serializeExcalidraw({ antes, escena: latest ? dibujo.serializar(latest) : escena, embebidos });
 }
 
-// Tras guardar, el estado actual del dibujo pasa a ser la referencia para detectar cambios.
-function markSaved(d) {
-  d.dirty = false;
-  if (d.kind === 'draw' && d.draw.latest) d.draw.base = dibujo.firma(d.draw.latest.elements);
+// Firma del dibujo tal como lo recoge contentOf en ese instante (null si no se ha tocado).
+const firmaDe = (d) => (d.kind === 'draw' && d.draw.latest ? dibujo.firma(d.draw.latest.elements) : null);
+
+// Tras guardar, lo que se escribió pasa a ser la referencia para detectar cambios. Un trazo hecho mientras se
+// escribía el fichero sigue pendiente: `escrita` se calcula antes de escribir, no al terminar.
+function markSaved(d, escrita = firmaDe(d)) {
+  if (escrita === null) {
+    d.dirty = false;
+    return;
+  }
+  const { base, dirty } = trasGuardar(escrita, firmaDe(d));
+  d.draw.base = base;
+  d.dirty = dirty;
 }
 
 // Aplica las extensiones de CodeMirror de los plugins activos al documento visible. Si alguna no es
@@ -469,6 +479,7 @@ async function save(force = false, target = cur) {
   if (!d) return;
   if (!d.file) return saveAs();
   const content = contentOf(d);
+  const escrita = firmaDe(d);
   let r;
   try {
     r = await window.api.writeFile({ path: d.file, content, expectedMtimeMs: d.mtimeMs, force });
@@ -485,7 +496,8 @@ async function save(force = false, target = cur) {
     return;
   }
   d.mtimeMs = r.mtimeMs;
-  markSaved(d);
+  markSaved(d, escrita);
+  if (d.dirty && d.kind === 'draw' && autosaveOn()) scheduleAutosave(d);
   renderTabs();
   if (d === cur) updateTitle();
   emit('document:saved', { path: d.file });
@@ -495,6 +507,7 @@ async function saveAs() {
   const d = cur;
   if (!d) return;
   const content = contentOf(d);
+  const escrita = firmaDe(d);
   const p = await window.api.saveAsDialog(d.file || (d.kind === 'draw' ? drawFileName() : 'sin-titulo.md'));
   if (!p) return;
   let r;
@@ -506,7 +519,7 @@ async function saveAs() {
   }
   d.file = p;
   d.mtimeMs = r.mtimeMs;
-  markSaved(d);
+  markSaved(d, escrita);
   if (d === cur) setBaseDir(dirname(p));
   renderTabs();
   if (d === cur) { updateTitle(); explorer?.setActive(p); }
@@ -746,11 +759,13 @@ const sceneOf = (d) => d.draw.latest || d.draw.escena;
 // Crea el fichero de un dibujo nuevo en la carpeta de dibujos (por defecto Descargas).
 async function createInFolder(d) {
   try {
-    const r = await window.api.drawCreateAuto(drawFileName(), contentOf(d));
+    const content = contentOf(d);
+    const escrita = firmaDe(d);
+    const r = await window.api.drawCreateAuto(drawFileName(), content);
     if (!r.ok) throw new Error(r.error);
     d.file = r.path;
     d.mtimeMs = r.mtimeMs;
-    markSaved(d);
+    markSaved(d, escrita);
     renderTabs();
     if (d === cur) { updateTitle(); explorer?.setActive(r.path); }
     explorer?.refresh();
