@@ -41,6 +41,10 @@ Go to the [releases](https://github.com/jfr1504/pluMd/releases/latest) page and 
 | --- | --- |
 | <img src="docs/screenshots/windows-claro.png" alt="Windows look in light mode"> | <img src="docs/screenshots/mac-oscuro.png" alt="Mac look in dark mode"> |
 
+A drawing made with Excalidraw inside PluMd, with the Dibujo [Drawing] tab:
+
+<p align="center"><img src="docs/screenshots/plumd-excalidraw.png" alt="An Excalidraw drawing open in PluMd, with the Dibujo tab of the ribbon and the folder panel"></p>
+
 The documents in the screenshots are fictitious.
 
 ## Development
@@ -50,7 +54,7 @@ Requirements: Node.js 24 or later.
 ```bash
 npm install
 npm start          # builds and opens the app
-npm test           # tests for file access, image pasting and the table model
+npm test           # tests for file access, image pasting, the table model and drawings
 npm run dist       # builds the installer and the portable version in release/
 ```
 
@@ -82,4 +86,5 @@ Pull Requests and Issues are welcome, in English or Spanish. The guidelines are 
 ## Credits
 
 - The Inter typeface used in the Mac look is by The Inter Project Authors, under the SIL Open Font License 1.1.
-- Electron, CodeMirror and Lezer, under the MIT licence.
+- Electron, CodeMirror, Lezer, Excalidraw, React and lz-string, under the MIT licence.
+- The Excalidraw drawing view bundles the fonts that come with `@excalidraw/excalidraw` (Assistant, Cascadia Code, Comic Shanns, Excalifont, Liberation Sans, Lilita One, Nunito and Virgil), each under its own licence, mostly SIL Open Font License 1.1.
