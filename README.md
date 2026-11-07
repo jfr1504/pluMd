@@ -41,6 +41,10 @@ Go to the [releases](https://github.com/jfr1504/pluMd/releases/latest) page and 
 | --- | --- |
 | <img src="docs/screenshots/windows-claro.png" alt="Windows look in light mode"> | <img src="docs/screenshots/mac-oscuro.png" alt="Mac look in dark mode"> |
 
+A drawing made with Excalidraw inside PluMd, with the Dibujo [Drawing] tab:
+
+<p align="center"><img src="docs/screenshots/plumd-excalidraw.png" alt="An Excalidraw drawing open in PluMd, with the Dibujo tab of the ribbon and the folder panel"></p>
+
 The documents in the screenshots are fictitious.
 
 ## Development

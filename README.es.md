@@ -39,6 +39,10 @@ Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest)
 | --- | --- |
 | <img src="docs/screenshots/windows-claro.png" alt="Aspecto Windows en modo claro"> | <img src="docs/screenshots/mac-oscuro.png" alt="Aspecto Mac en modo oscuro"> |
 
+Un dibujo hecho con Excalidraw dentro de PluMd, con la pestaña Dibujo:
+
+<p align="center"><img src="docs/screenshots/plumd-excalidraw.png" alt="Un dibujo de Excalidraw abierto en PluMd, con la pestaña Dibujo de la cinta y el panel de carpetas"></p>
+
 Los documentos de las capturas son ficticios.
 
 ## Desarrollo
