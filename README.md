@@ -54,7 +54,7 @@ Requirements: Node.js 24 or later.
 ```bash
 npm install
 npm start          # builds and opens the app
-npm test           # tests for file access, image pasting and the table model
+npm test           # tests for file access, image pasting, the table model and drawings
 npm run dist       # builds the installer and the portable version in release/
 ```
 
@@ -86,4 +86,4 @@ Pull Requests and Issues are welcome, in English or Spanish. The guidelines are 
 ## Credits
 
 - The Inter typeface used in the Mac look is by The Inter Project Authors, under the SIL Open Font License 1.1.
-- Electron, CodeMirror and Lezer, under the MIT licence.
+- Electron, CodeMirror, Lezer, Excalidraw, React and lz-string, under the MIT licence.

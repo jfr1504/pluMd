@@ -52,7 +52,7 @@ Requisitos: Node.js 24 o superior.
 ```bash
 npm install
 npm start          # compila y abre la aplicación
-npm test           # pruebas del acceso a ficheros, el pegado de imágenes y el modelo de tablas
+npm test           # pruebas del acceso a ficheros, el pegado de imágenes, el modelo de tablas y los dibujos
 npm run dist       # genera el instalador y la versión portable en release/
 ```
 
@@ -82,4 +82,4 @@ Las propuestas de cambio (Pull Requests) y los avisos de errores (Issues) son bi
 ## Créditos
 
 - La tipografía Inter del aspecto Mac es de The Inter Project Authors, bajo licencia SIL Open Font License 1.1.
-- Electron, CodeMirror y Lezer, bajo licencia MIT.
+- Electron, CodeMirror, Lezer, Excalidraw, React y lz-string, bajo licencia MIT.
