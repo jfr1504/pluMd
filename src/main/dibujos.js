@@ -19,6 +19,10 @@ function nombreSeguro(nombre) {
   return (limpio || 'Dibujo') + EXT;
 }
 
+// Firma completa de un PNG (8 bytes): evita aceptar como imagen cualquier cosa que solo empiece igual.
+const FIRMA_PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const esPng = (buf) => Buffer.isBuffer(buf) && buf.length >= FIRMA_PNG.length && buf.subarray(0, FIRMA_PNG.length).equals(FIRMA_PNG);
+
 function createDibujos({ settingsFile, defaultDir, libraryFile }) {
   async function leerAjustes() {
     try {
@@ -92,4 +96,4 @@ function createDibujos({ settingsFile, defaultDir, libraryFile }) {
   return { info, setFolder, createNew, leerBiblioteca, guardarBiblioteca };
 }
 
-module.exports = { createDibujos, nombreSeguro, EXT };
+module.exports = { createDibujos, nombreSeguro, esPng, EXT };

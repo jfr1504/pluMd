@@ -75,13 +75,6 @@ window.PluMdDraw = {
     api.updateScene({ appState: { zoom: { value: z }, scrollX: s.width / 2 / z - cx, scrollY: s.height / 2 / z - cy } });
   },
 
-  // Posición y zoom actuales de la vista (para comprobar los desplazamientos).
-  estado() {
-    if (!api) return null;
-    const s = api.getAppState();
-    return { scrollX: s.scrollX, scrollY: s.scrollY, zoom: s.zoom.value, elementos: api.getSceneElements().filter((e) => !e.isDeleted).length };
-  },
-
   // Ajusta zoom y posición para ver todo el dibujo.
   ajustar() {
     if (!api) return;

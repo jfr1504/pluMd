@@ -5,7 +5,7 @@ const { createFsOps } = require('./fsops');
 const { MD_RE, DENIED, createAccess, writeAtomic, savePastedImage, resolveImagePath } = require('./acceso');
 const { readClipboardPng } = require('./portapapeles');
 const { createPlugins, registerScheme } = require('./plugins');
-const { createDibujos } = require('./dibujos');
+const { createDibujos, esPng } = require('./dibujos');
 
 // El esquema plumd-plugin:// (ficheros de los plugins) debe registrarse antes de que la app esté lista.
 registerScheme(protocol);
@@ -307,7 +307,7 @@ ipcMain.handle('draw:export', guard(async (suggested, kind, data) => {
 ipcMain.handle('draw:saveImage', guard(async (docPath, bytes) => {
   if (!(await mayUse(docPath))) throw denied();
   const png = Buffer.from(bytes);
-  if (png.length < 8 || png.readUInt32BE(0) !== 0x89504e47) throw new Error('La imagen no es un PNG válido.');
+  if (!esPng(png)) throw new Error('La imagen no es un PNG válido.');
   return { ok: true, ...(await savePastedImage(docPath, png)) };
 }));
 

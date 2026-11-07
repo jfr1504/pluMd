@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { createDibujos, nombreSeguro } = require('../src/main/dibujos');
+const { createDibujos, nombreSeguro, esPng } = require('../src/main/dibujos');
 
 function entorno() {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'plumd-dib-'));
@@ -104,4 +104,19 @@ test('al guardar la biblioteca no queda ningún temporal', async () => {
   await d.guardarBiblioteca([]);
   assert.deepEqual(fs.readdirSync(path.join(base, 'ajustes')), ['biblioteca.json']);
   limpiar();
+});
+
+test('solo se acepta como PNG lo que lleva la firma completa de 8 bytes', () => {
+  const firma = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  assert.equal(esPng(Buffer.from([...firma, 0, 0, 0, 0])), true);
+  assert.equal(esPng(Buffer.from(firma)), true);
+});
+
+test('se rechaza lo que solo empieza como un PNG, lo corto y lo que no es un buffer', () => {
+  assert.equal(esPng(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x00, 0x00])), false);
+  assert.equal(esPng(Buffer.from([0x89, 0x50, 0x4e, 0x47])), false);
+  assert.equal(esPng(Buffer.alloc(0)), false);
+  assert.equal(esPng(Buffer.from('<svg></svg>')), false);
+  assert.equal(esPng('PNG'), false);
+  assert.equal(esPng(null), false);
 });
