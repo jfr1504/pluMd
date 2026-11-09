@@ -1,7 +1,7 @@
 name: Compilar y publicar
 
 # - En cada Pull Request hacia main: compila los paquetes de Windows y Linux y los guarda 7 días como artefactos.
-# - Al subir una etiqueta vX.Y.Z: compila ambas plataformas y publica todos los paquetes con sus sumas.
+# - Al subir una etiqueta vX.Y.Z: publica Windows y, si están disponibles, los paquetes Linux con sus sumas.
 on:
   pull_request:
     branches: [main]
@@ -101,7 +101,8 @@ jobs:
           retention-days: 7
 
   publish:
-    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    # !cancelled() evita el success() implícito: un fallo de Linux no bloquea Windows.
+    if: ${{ startsWith(github.ref, 'refs/tags/') && !cancelled() && needs.windows.result == 'success' }}
     needs: [windows, linux]
     runs-on: ubuntu-latest
     permissions:
@@ -115,22 +116,28 @@ jobs:
           path: release
 
       - uses: actions/download-artifact@v4
+        if: ${{ needs.linux.result == 'success' }}
+        continue-on-error: true
         with:
           name: PluMd-Linux
           path: release
 
-      - name: Crear sumas conjuntas
-        run: |
-          cd release
-          sha256sum PluMd-Setup-*.exe PluMd-portable-*.exe PluMd-*.AppImage PluMd-*.deb > SHA256SUMS.txt
-
-      - name: Publicar la versión
+      - name: Crear sumas y publicar la versión
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -Eeuo pipefail
+          cd release
+          # Windows es obligatorio: los patrones sin coincidencias harán fallar sha256sum.
+          windows=(PluMd-Setup-*.exe PluMd-portable-*.exe)
+          # Linux es opcional: no pasar patrones literales cuando no haya paquetes.
+          shopt -s nullglob
+          linux=(PluMd-*.AppImage PluMd-*.deb)
+          packages=("${windows[@]}" "${linux[@]}")
+          sha256sum "${packages[@]}" > SHA256SUMS.txt
           gh release create "$GITHUB_REF_NAME" \
-            release/PluMd-Setup-*.exe release/PluMd-portable-*.exe \
-            release/PluMd-*.AppImage release/PluMd-*.deb release/SHA256SUMS.txt \
+            "${packages[@]}" SHA256SUMS.txt \
             --title "PluMd ${GITHUB_REF_NAME#v}" \
-            --notes-file .github/release-notes.md \
+            --notes-file ../.github/release-notes.md \
             --verify-tag
