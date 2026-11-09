@@ -7,7 +7,7 @@ const { createFsOps, msg } = require('../src/main/fsops');
 
 // Todo ocurre en carpetas temporales locales. Papelera, tipo de unidad y borrado definitivo van simulados:
 // ninguna prueba toca una unidad de red. `drive` es el tipo de unidad de Windows (3 fijo, 2 extraíble, 4 red, null desconocido).
-function setup({ network = false, drive = network ? 4 : 3 } = {}) {
+function setup({ network = false, drive = network ? 4 : 3, readMounts = async () => 'local / ext4 rw 0 0\n' } = {}) {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'plumd-test-'));
   const root = path.join(base, 'raiz');
   const fuera = path.join(base, 'fuera');
@@ -17,6 +17,7 @@ function setup({ network = false, drive = network ? 4 : 3 } = {}) {
   const ops = createFsOps({
     trash: async (p) => calls.trash.push(p),
     driveType: async () => drive,
+    readMounts,
     unlink: async (p) => calls.unlink.push(p),
   });
   return { base, root, fuera, ops, calls, done: () => fs.rmSync(base, { recursive: true, force: true }) };
@@ -382,4 +383,85 @@ test('Linux no recurre al borrado permanente si falla la Papelera', { skip: proc
   } finally {
     t.done();
   }
+});
+
+const linuxOnly = { skip: process.platform !== 'linux' };
+const mountEscape = (p) => p.replace(/\\/g, '\\134').replace(/ /g, '\\040').replace(/\t/g, '\\011').replace(/\n/g, '\\012');
+
+for (const type of ['nfs', 'nfs4', 'cifs', 'smb3', 'smbfs', 'fuse.sshfs', 'fuse.gvfsd-fuse', 'davfs', 'davfs2', 'fuse.rclone']) {
+  test(`Linux detecta ${type} y exige confirmación antes de borrar`, linuxOnly, async () => {
+    const t = setup({ readMounts: async () => `server / ${type} rw 0 0\n` });
+    try {
+      assert.equal((await t.ops.setRoot(t.root)).network, true);
+      const file = path.join(t.root, 'nota.md');
+      fs.writeFileSync(file, 'conservar');
+      assert.equal((await t.ops.remove(file)).needsPermanent, true);
+      assert.deepEqual(t.calls.unlink, []);
+      assert.deepEqual(t.calls.trash, []);
+      assert.deepEqual(await t.ops.remove(file, { permanent: true }), { ok: true, permanent: true });
+      assert.deepEqual(t.calls.unlink, [fs.realpathSync(file)]);
+      assert.deepEqual(t.calls.trash, []);
+    } finally { t.done(); }
+  });
+}
+
+test('Linux elige el montaje más específico y respeta límites de carpeta', linuxOnly, async () => {
+  let table;
+  const t = setup({ readMounts: async () => table });
+  try {
+    const nested = path.join(t.root, 'local');
+    const sibling = t.root + '-otra';
+    fs.mkdirSync(nested);
+    fs.mkdirSync(sibling);
+    table = `local / ext4 rw 0 0\nlocal ${mountEscape(nested)} ext4 rw 0 0\nserver ${mountEscape(t.root)} nfs4 rw 0 0\n`;
+    assert.equal(await t.ops.isNetworkPath(t.root), true);
+    assert.equal(await t.ops.isNetworkPath(nested), false);
+    assert.equal(await t.ops.isNetworkPath(sibling), false);
+    const link = path.join(sibling, 'atajo');
+    fs.symlinkSync(t.root, link);
+    assert.equal(await t.ops.isNetworkPath(link), true, 'usa el destino real del enlace');
+    table = 'local / ext4 rw 0 0\n';
+    assert.equal(await t.ops.isNetworkPath(t.root), false, 'recoge cambios sin caché permanente');
+  } finally { t.done(); }
+});
+
+test('Linux decodifica espacios, tabuladores, saltos y barras inversas de los montajes', linuxOnly, async () => {
+  let table;
+  const t = setup({ readMounts: async () => table });
+  try {
+    for (const name of ['con espacio', 'con\ttab', 'con\nsalto', 'con\\barra']) {
+      const dir = path.join(t.root, name);
+      fs.mkdirSync(dir);
+      table = `local / ext4 rw 0 0\nserver ${mountEscape(dir)} cifs rw 0 0\n`;
+      assert.equal(await t.ops.isNetworkPath(dir), true, name);
+    }
+  } finally { t.done(); }
+});
+
+test('Linux bloquea el borrado si no puede determinar el montaje, incluso con permanent', linuxOnly, async () => {
+  for (const readMounts of [
+    async () => { throw new Error('EACCES'); },
+    async () => '',
+    async () => 'malformado',
+    async () => 'source / fuse.desconocido rw 0 0\n',
+    async () => 'server /otro nfs rw 0 0\n',
+  ]) {
+    const t = setup({ readMounts });
+    try {
+      assert.equal((await t.ops.setRoot(t.root)).network, true);
+      const file = path.join(t.root, 'nota.md');
+      fs.writeFileSync(file, 'conservar');
+      for (const permanent of [false, true]) {
+        assert.deepEqual(await t.ops.remove(file, { permanent }), { ok: false, error: msg.unknownMount });
+      }
+      assert.equal(fs.readFileSync(file, 'utf8'), 'conservar');
+      assert.deepEqual(t.calls.unlink, []);
+      assert.deepEqual(t.calls.trash, []);
+    } finally { t.done(); }
+  }
+});
+
+test('la clasificación de Windows no consulta la tabla de montajes Linux', async () => {
+  const ops = createFsOps({ platform: 'win32', readMounts: async () => { throw new Error('No debe consultarse'); } });
+  assert.equal(await ops.isNetworkPath('\\\\server\\share\\nota.md'), true);
 });

@@ -20,6 +20,10 @@ const INVALID_POSIX = /[/\x00-\x1f]/;
 const RESERVED_WINDOWS = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
 const FIXED_DRIVE = 3; // tipos de unidad de Windows: 3 = disco fijo, 4 = red
 const NETWORK_DRIVE = 4;
+const NETWORK_FS = new Set(['nfs', 'nfs4', 'cifs', 'smb3', 'smbfs', 'sshfs', 'fuse.sshfs',
+  'fuse.gvfsd-fuse', 'davfs', 'davfs2', 'fuse.davfs', 'fuse.rclone', '9p', 'ceph', 'fuse.ceph', 'glusterfs', 'fuse.glusterfs']);
+const LOCAL_FS = new Set(['ext2', 'ext3', 'ext4', 'xfs', 'btrfs', 'f2fs', 'zfs', 'vfat', 'exfat',
+  'ntfs', 'ntfs3', 'fuseblk', 'fuse.ntfs-3g', 'tmpfs', 'ramfs', 'overlay', 'squashfs', 'iso9660', 'udf']);
 const MAX_SCAN = 20000; // entradas que se revisan como máximo antes de borrar una carpeta
 
 // El panel no muestra los nombres que empiezan por punto ni estas carpetas.
@@ -31,6 +35,7 @@ const msg = {
   notDoc: 'Solo se pueden gestionar documentos .md, .markdown o .txt.',
   exists: 'Ya existe un documento con ese nombre.',
   invalidName: 'El nombre no es válido: no puede estar vacío ni llevar \\ / : * ? " < > |',
+  unknownMount: 'No se pudo determinar el montaje del documento. No se ha borrado; utiliza el gestor de archivos.',
   network: 'El documento está en una unidad de red: no hay Papelera y el borrado es definitivo.',
   existsDir: 'Ya existe una carpeta o un documento con ese nombre.',
   invalidDirName: 'El nombre no es válido: no puede estar vacío, empezar por un punto, acabar en punto o espacio, ni llevar \\ / : * ? " < > |',
@@ -71,7 +76,8 @@ async function countHiddenFiles(dir, budget = { left: MAX_SCAN }, shown = true) 
   return count;
 }
 
-function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.promises.unlink(p), platform = process.platform } = {}) {
+function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.promises.unlink(p), platform = process.platform,
+  readMounts = () => fs.promises.readFile('/proc/mounts', 'utf8') } = {}) {
   let root = null;
   const driveCache = new Map();
 
@@ -85,6 +91,29 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
       return false;
     }
   };
+
+  // /proc/mounts escapa espacios, tabuladores, saltos de línea y barras inversas en octal.
+  // Se consulta en cada operación: una unidad de red puede montarse o desmontarse con la app abierta.
+  async function linuxNetworkPath(p) {
+    try {
+      const real = await realPath(p);
+      const mounts = await readMounts();
+      let match = null;
+      for (const line of mounts.split('\n')) {
+        if (!line.trim() || line.trimStart().startsWith('#')) continue;
+        const fields = line.trim().split(/\s+/);
+        if (fields.length < 6 || !fields[1].startsWith('/')) return null;
+        const mount = fields[1].replace(/\\(040|011|012|134)/g, (_, octal) => String.fromCharCode(parseInt(octal, 8)));
+        if (real !== mount && !real.startsWith(mount === '/' ? '/' : mount + '/')) continue;
+        if (!match || mount.length >= match.mount.length) match = { mount, type: fields[2] };
+      }
+      if (!match) return null;
+      if (NETWORK_FS.has(match.type)) return true;
+      return LOCAL_FS.has(match.type) ? false : null;
+    } catch {
+      return null;
+    }
+  }
 
   // Tipo de unidad de la ruta: una ruta UNC es de red; sin letra de unidad reconocible o sin poder saberlo, null.
   async function driveTypeOf(p) {
@@ -100,6 +129,7 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
 
   // En caso de duda (tipo desconocido) se trata como red: es lo prudente para el borrado definitivo.
   async function isNetworkPath(p) {
+    if (platform === 'linux') return (await linuxNetworkPath(p)) !== false;
     if (platform !== 'win32') return false;
     const t = await driveTypeOf(p);
     return t === null || t === NETWORK_DRIVE;
@@ -273,7 +303,9 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
       if (!MD_RE.test(p)) return { ok: false, error: msg.notDoc };
       try {
         const real = await realPath(p);
-        const net = await isNetworkPath(real);
+        const network = platform === 'linux' ? await linuxNetworkPath(real) : await isNetworkPath(real);
+        if (network === null) return fail(msg.unknownMount);
+        const net = network;
         if (net && !permanent) return { ok: false, error: msg.network, needsPermanent: true };
         if (!(await fs.promises.stat(real)).isFile()) return { ok: false, error: msg.notDoc };
         if (net) await unlink(real);

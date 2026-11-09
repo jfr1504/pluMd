@@ -23,7 +23,7 @@ Descarga `PluMd-X.Y.Z-x86_64.AppImage` o `PluMd-X.Y.Z-amd64.deb` desde las versi
 
 En Ubuntu 24.04 y posteriores, AppArmor puede impedir el arranque del AppImage al restringir los espacios de nombres de usuario que necesita el sandbox de Electron, incluso con FUSE instalado. Consulta la [documentación de Ubuntu](https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/) para configurar un perfil específico para la aplicación. No desactives el sandbox de Electron ni las restricciones globales de AppArmor.
 
-Los montajes NFS/SMB/sshfs todavía no se identifican como unidades de red: no se consulta `/proc/mounts`. En Linux, el borrado de documentos siempre intenta usar la Papelera del escritorio; si falla, muestra el error y no recurre al borrado permanente. El borrado de carpetas desde PluMd está deshabilitado porque no se puede confirmar que el montaje sea un disco fijo; usa el gestor de archivos.
+Linux consulta `/proc/mounts` y utiliza el punto de montaje más específico de la ruta real para detectar sistemas de archivos de red (NFS, SMB/CIFS, sshfs, GVFS, WebDAV y rclone, entre otros). Los documentos locales conocidos se envían a la Papelera del escritorio; un fallo nunca provoca borrado permanente. Los documentos de red requieren confirmación explícita para el borrado definitivo. Si no hay información del montaje o su tipo no se reconoce, se bloquea el borrado. El borrado de carpetas sigue deshabilitado en Linux; utiliza el gestor de archivos.
 
 ## Qué hace
 

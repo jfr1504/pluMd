@@ -25,7 +25,7 @@ Download `PluMd-X.Y.Z-x86_64.AppImage` or `PluMd-X.Y.Z-amd64.deb` from the relea
 
 On Ubuntu 24.04 and later, AppArmor may prevent the AppImage from starting by restricting the user namespaces required by Electron's sandbox, even with FUSE installed. See the [Ubuntu documentation](https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/) to configure an application-specific profile. Do not disable Electron's sandbox or the global AppArmor restrictions.
 
-NFS/SMB/sshfs mounts are not yet detected as network drives: `/proc/mounts` is not inspected. On Linux, deleting a document always attempts to use the desktop Trash; if that fails, the error is shown and there is no permanent-delete fallback. Folder deletion from PluMd is disabled because the mount cannot be confirmed as a fixed disk; use the file manager.
+Linux reads `/proc/mounts` and uses the most specific mount point of the real path to detect network filesystems (NFS, SMB/CIFS, sshfs, GVFS, WebDAV and rclone, among others). Known local documents go to the desktop Trash; a failure never triggers permanent deletion. Network documents require explicit confirmation for permanent deletion. If mount information is unavailable or the filesystem type is unrecognised, deletion is blocked. Folder deletion remains disabled on Linux; use the file manager.
 
 ## Features
 
