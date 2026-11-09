@@ -17,6 +17,7 @@ Go to the [releases](https://github.com/jfr1504/pluMd/releases/latest) page and 
 - Windows SmartScreen may show "Windows protected your PC", because the program is not signed yet. Click "More info" and then "Run anyway".
 - Each release includes `SHA256SUMS.txt` to check that the downloaded file is the published one. GitHub builds the `.exe` files from the code in this repository.
 - The portable version does not register `.md` files by itself. To open them with a double click, use "Open with" on a `.md` file once and choose PluMd, or use the installer.
+- Code signing: free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by the [SignPath Foundation](https://signpath.org/). See the [code signing policy](CODE_SIGNING_POLICY.md).
 
 ## Linux
 
@@ -32,9 +33,11 @@ NFS/SMB/sshfs mounts are not yet detected as network drives: `/proc/mounts` is n
 - Two views: Lectura [Reading], a clean editable document without Markdown symbols, and Código [Code], the raw Markdown. Ctrl+E switches between them.
 - Full-width ribbon with the Inicio [Home], Insertar [Insert], Vista [View] and Ayuda [Help] tabs: heading styles, bold, italic, underline, lists, tasks, editable tables (drag the header border to resize a column; text wraps inside the cell), images, links (to web pages or to folders, including network shares), code blocks with highlighting, search and zoom. Typing `/` in the editor opens a command menu to insert headings, lists, tables and more.
 - Pasting images: Ctrl+V with a screenshot on the clipboard saves it as `imagenes/yymmdd_hhmm.png` next to the document and inserts the link. The document must be saved first. Remote images (https) are not loaded until you click «Cargar» [Load] on each one.
+- Image size and position: drag the handle at the bottom-right corner of an image to resize it (double-click it to restore the original size); the width is stored Obsidian-style in the description, `![text|300](path)`. Drag the image itself through the text to move it; Esc cancels.
 - Several documents at once in tabs. Open them with Abrir, with a double click or by dragging `.md` files onto the window. All tabs can be closed; with no documents open, a screen offers Nuevo [New] and Abrir.
 - Folder panel on the left, open by default (close it with the cross and reopen it from Vista; open a folder with Archivo > Abrir carpeta [File > Open folder] or by dragging it in). It shows `.md`, `.markdown` and `.txt` files, opens them in a tab with one click and remembers the last folder. Typing a path (`C:\Data` or `\\server\share`) in the panel box and pressing Enter opens the folder dialog already placed there. Right click offers new document, new folder, rename, copy, duplicate, paste, copy path or name, and delete. Delete sends the file to the Recycle Bin after a confirmation; Windows network drives have no Recycle Bin, so a separate confirmation is required and the deletion is permanent. A folder can only be deleted if it is empty or holds nothing but `.md`, `.markdown` and `.txt` files (and subfolders with the same), and only on a fixed disk; it goes to the Recycle Bin after a confirmation. Anything else, hidden files included, must be deleted from the file manager. Nothing is overwritten and nothing is touched outside the open folder.
 - Headings can be collapsed with the arrow on their left, as in Obsidian.
+- Drawings with Excalidraw (Archivo > Nuevo dibujo [File > New drawing]). A drawing is a `.excalidraw.md` note in the same format as the Excalidraw plugin for Obsidian, so each program can open the other's files. A new drawing is created straight away in your Downloads folder (changeable in the Dibujo [Drawing] tab) and saved automatically a moment after each change. The Dibujo tab also has full screen (F11), grid, zen and read-only modes, fit to content, export to PNG or SVG, and inserting the drawing into the open note as an image in `imagenes/`. The Excalidraw shape library (Biblioteca [Library]) is kept between sessions. Excalidraw is loaded only when the first drawing is opened.
 - Right-click menus: in the editor (cut, copy, paste, formatting, convert to heading, list or quote), on links, images, tables (insert and delete rows and columns, align), code blocks (copy, change language) and headings (collapse the section); on the tabs (close, copy path); and in the folder panel.
 - Three looks (PluMd, Windows and Mac), each in light and dark mode (Vista > Aspecto [View > Look]). They change the appearance only, not the layout. Skins are CSS sheets with a registry (`src/renderer/skins.js`), so future plugins can add their own.
 - Custom colours for headings, bold, text, links and more (Vista > Personalizar colores [View > Custom colours]).
@@ -47,6 +50,10 @@ NFS/SMB/sshfs mounts are not yet detected as network drives: `/proc/mounts` is n
 | --- | --- |
 | <img src="docs/screenshots/windows-claro.png" alt="Windows look in light mode"> | <img src="docs/screenshots/mac-oscuro.png" alt="Mac look in dark mode"> |
 
+A drawing made with Excalidraw inside PluMd, with the Dibujo [Drawing] tab:
+
+<p align="center"><img src="docs/screenshots/plumd-excalidraw.png" alt="An Excalidraw drawing open in PluMd, with the Dibujo tab of the ribbon and the folder panel"></p>
+
 The documents in the screenshots are fictitious.
 
 ## Development
@@ -56,7 +63,7 @@ Requirements: Node.js 24 or later.
 ```bash
 npm install
 npm start          # builds and opens the app
-npm test           # tests for file access, image pasting and the table model
+npm test           # tests for file access, image pasting, the table model and drawings
 npm run dist       # builds the installer and the portable version in release/
 npm run dist:linux # builds AppImage and .deb packages in release/
 ```
@@ -70,6 +77,7 @@ Packaging includes all of `dist/**`, including bundles and fonts. After integrat
 - `src/main/`: Electron main process (window, files, clipboard). `acceso.js` handles real paths, authorized access and atomic writes; `fsops.js` the folder panel operations.
 - `src/renderer/`: interface (CodeMirror 6 editor, ribbon, tables, images, dialogs, folder panel, skins).
 - `src/renderer/plugins/` and `src/main/plugins.js`: plugin system (registries, API, loader, plugin screen).
+- `src/renderer/draw/` and `src/renderer/drawView.js`: the Excalidraw drawing view (a separate bundle, loaded on demand). `src/renderer/excalidrawModelo.mjs` reads and writes the `.excalidraw.md` format; `src/main/dibujos.js` holds the folder for new drawings.
 - `plugins-ejemplo/` and `docs/`: example plugins and documentation.
 - `tests/`: tests with `node:test`, also run on every Pull Request.
 - `scripts/build.js`: renderer bundling with esbuild.
@@ -92,4 +100,5 @@ Pull Requests and Issues are welcome, in English or Spanish. The guidelines are 
 ## Credits
 
 - The Inter typeface used in the Mac look is by The Inter Project Authors, under the SIL Open Font License 1.1.
-- Electron, CodeMirror and Lezer, under the MIT licence.
+- Electron, CodeMirror, Lezer, Excalidraw, React and lz-string, under the MIT licence.
+- The Excalidraw drawing view bundles the fonts that come with `@excalidraw/excalidraw` (Assistant, Cascadia Code, Comic Shanns, Excalifont, Liberation Sans, Lilita One, Nunito and Virgil), each under its own licence, mostly SIL Open Font License 1.1.

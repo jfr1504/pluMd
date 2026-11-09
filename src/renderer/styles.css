@@ -124,7 +124,8 @@ body.ribbon-collapsed #btn-collapse svg { transform: rotate(180deg); }
 /* ---- Documento ---- */
 main { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
 #editor { padding: 20px 40px 120px; --zoom: 1; }
-#editor[hidden], #no-docs[hidden] { display: none; }
+#editor[hidden], #no-docs[hidden], #draw[hidden] { display: none; }
+#draw { height: 100%; }
 #no-docs { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; height: 100%; min-height: 240px; color: var(--muted); }
 #no-docs p { margin: 0; font-size: 1.05em; }
 #no-docs div { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
@@ -190,8 +191,13 @@ main { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
 .cm-lp-check { margin: 0 6px 0 0; vertical-align: middle; width: 1em; height: 1em; accent-color: var(--accent); cursor: pointer; }
 .cm-lp-done { text-decoration: line-through; color: var(--muted); }
 .cm-lp-hr { display: block; height: 1px; background: var(--border); margin: .4em 0; }
-.cm-lp-img { display: inline-block; max-width: 100%; vertical-align: bottom; cursor: pointer; border-radius: var(--r-s); }
+.cm-lp-img { position: relative; display: inline-block; max-width: 100%; vertical-align: bottom; cursor: grab; border-radius: var(--r-s); }
 .cm-lp-img img { display: block; max-width: 100%; height: auto; border-radius: var(--r-s); }
+.cm-lp-img-grip { position: absolute; right: 8px; bottom: 8px; width: 16px; height: 16px; border: 2px solid var(--on-accent); border-radius: var(--r-s); background: var(--accent); box-shadow: var(--shadow-pop); cursor: nwse-resize; opacity: 0; transition: opacity .15s; }
+.cm-lp-img:hover .cm-lp-img-grip, .cm-lp-img.resizing .cm-lp-img-grip { opacity: 1; }
+.cm-lp-img.dragging { opacity: .5; }
+.cm-lp-drop { position: fixed; z-index: 40; border-radius: 1px; background: var(--accent); pointer-events: none; }
+body.img-dragging, body.img-dragging * { cursor: grabbing !important; user-select: none; }
 .cm-lp-img.broken { color: var(--muted); border: 1px dashed var(--border); padding: 4px 10px; font-size: .85em; }
 .cm-lp-img.blocked { color: var(--muted); border: 1px dashed var(--border); padding: 4px 10px; font-size: .85em; cursor: default; }
 .cm-lp-img.blocked button { margin-left: 6px; font: inherit; cursor: pointer; }
@@ -405,3 +411,15 @@ button.status-item:hover { background: var(--bg-3); color: var(--text); }
 .cm-tooltip.slash-menu > ul > li[aria-selected] { background: var(--accent-soft); color: var(--text); }
 .cm-tooltip.slash-menu .cm-completionDetail { margin-left: auto; font-style: normal; font-size: 11px; color: var(--accent); }
 .cm-tooltip.slash-menu .cm-completionIcon { display: none; }
+
+/* ---- Dibujos: aviso flotante, pestaña contextual y pantalla completa ---- */
+/* Espaciados en múltiplos de 4 (4, 8, 16, 24, 32). */
+#tabs .tab[hidden] { display: none; }
+#float-note { position: fixed; left: 50%; bottom: 96px; z-index: 40; transform: translate(-50%, 8px); padding: 8px 16px; border-radius: var(--r-l); background: var(--accent); color: var(--on-accent); box-shadow: var(--shadow-pop); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+#float-note.on { opacity: 1; transform: translate(-50%, 0); }
+#focus-exit { display: none; position: fixed; top: 16px; right: 16px; z-index: 40; width: 32px; height: 32px; border: 0; border-radius: var(--r-l); background: #c42b1c; color: #fff; box-shadow: var(--shadow-pop); }
+#focus-exit:hover { background: #a82314; }
+/* El dibujo trae su botón de salir; en modo zen sus herramientas se ocultan y vuelve el fijo. */
+body.draw-active:not(.draw-zen) #focus-exit { display: none !important; }
+body.focus #focus-exit { display: flex; align-items: center; justify-content: center; }
+body.focus #titlebar, body.focus #tabs, body.focus #panels, body.focus #sidebar, body.focus #splitter, body.focus #doctabs, body.focus #statusbar, body.focus #banner { display: none; }

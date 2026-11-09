@@ -2,6 +2,7 @@ import { syntaxTree } from '@codemirror/language';
 import { Decoration, ViewPlugin, EditorView, WidgetType } from '@codemirror/view';
 import { resolveImageSrc, getBaseDir } from './images.js';
 import { isRenderedBlock } from './plugins/blockRenderers.js';
+import { parseAlt, enableResize, enableMove } from './imageEdit.js';
 
 // Marcas de sintaxis Markdown que se ocultan (el resto de casos se decide en build()).
 const HIDE = new Set(['HeaderMark', 'EmphasisMark', 'StrikethroughMark', 'CodeMark', 'QuoteMark', 'CodeInfo']);
@@ -61,10 +62,10 @@ class ImageWidget extends WidgetType {
   constructor(src, alt, base) {
     super();
     this.src = src;
-    this.alt = alt;
+    ({ alt: this.alt, width: this.width } = parseAlt(alt));
     this.base = base;
   }
-  eq(o) { return o.src === this.src && o.alt === this.alt && o.base === this.base; }
+  eq(o) { return o.src === this.src && o.alt === this.alt && o.width === this.width && o.base === this.base; }
   toDOM(view) {
     const wrap = document.createElement('span');
     wrap.className = 'cm-lp-img';
@@ -82,8 +83,10 @@ class ImageWidget extends WidgetType {
       img.title = this.alt;
       img.onload = () => view.requestMeasure();
       img.onerror = fail;
+      if (this.width) img.style.width = `${this.width}px`;
       img.src = url;
       wrap.append(img);
+      enableResize(wrap, img, view);
     };
     if (!url) fail();
     else if (/^https?:/i.test(url)) {
@@ -110,6 +113,7 @@ class ImageWidget extends WidgetType {
       if (n) view.dispatch({ selection: { anchor: n.from, head: n.to } });
       view.focus();
     });
+    enableMove(wrap, view);
     return wrap;
   }
   ignoreEvent() { return true; }

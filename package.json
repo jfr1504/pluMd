@@ -1,6 +1,6 @@
 {
   "name": "plumd",
-  "version": "0.2.6",
+  "version": "0.3.0",
   "description": "Editor y visor de Markdown con cinta tipo Word y plugins",
   "main": "src/main/main.js",
   "scripts": {
@@ -23,9 +23,13 @@
   "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
     "electron": "^45.0.0",
     "electron-builder": "^26.18.0",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "lz-string": "^1.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.4",

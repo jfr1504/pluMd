@@ -56,6 +56,13 @@ export const ICONS = {
   reveal: P('M3 6h6l2 2h10v11H3z M12 13h5 M14.5 10.5L17 13l-2.5 2.5'),
   puzzle: P('M10 4a2 2 0 114 0v1h4v4h-1a2 2 0 100 4h1v4h-4v-1a2 2 0 10-4 0v1H6v-4H5a2 2 0 110-4h1V5h4z'),
   info: P('M12 3a9 9 0 100 18 9 9 0 000-18z M12 11v6 M12 7.5h.01'),
+  fullscreen: P('M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5'),
+  fit: P('M4 8V4h4 M16 4h4v4 M20 16v4h-4 M8 20H4v-4 M8 8h8v8H8z'),
+  grid: P('M4 4h16v16H4z M4 9.3h16 M4 14.7h16 M9.3 4v16 M14.7 4v16'),
+  eyeoff: P('M2 12s4-7 10-7c2 0 3.8.6 5.2 1.5 M22 12s-4 7-10 7c-2 0-3.8-.6-5.2-1.5 M4 4l16 16 M10 10a3 3 0 004 4'),
+  lock: P('M6 11h12v9H6z M8 11V8a4 4 0 118 0v3'),
+  export: P('M12 3v12 M7 8l5-5 5 5 M4 15v6h16v-6'),
+  insertdraw: P('M7 3h8l4 4v14H7z M15 3v4h4 M9 17l3-3 2 2 3-3'),
   saveas: P('M5 3h11l3 3v6 M5 3v18h7 M8 3v6h7V3 M15 19l2 2 4-5'),
 };
 

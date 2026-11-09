@@ -15,6 +15,7 @@ Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest)
 - Windows SmartScreen puede mostrar "Windows protegió su PC", porque el programa aún no está firmado. Pulsa "Más información" y luego "Ejecutar de todos modos".
 - Cada versión incluye `SHA256SUMS.txt` para comprobar que el fichero descargado es el publicado. El `.exe` lo compila GitHub a partir del código de este repositorio.
 - El portable no registra por sí solo los `.md` como suyos. Para abrirlos con doble clic, usa "Abrir con" sobre un `.md` una vez y elige PluMd, o instala con el instalador.
+- Firma de código: firma gratuita proporcionada por [SignPath.io](https://about.signpath.io/), certificado de la [SignPath Foundation](https://signpath.org/). Consulta la [política de firma de código](CODE_SIGNING_POLICY.md) (en inglés).
 
 ## Linux
 
@@ -30,9 +31,11 @@ Los montajes NFS/SMB/sshfs todavía no se identifican como unidades de red: no s
 - Dos vistas: Lectura (documento limpio y editable, sin símbolos Markdown) y Código (el Markdown tal cual). Ctrl+E alterna.
 - Cinta de opciones a todo el ancho, con pestañas Inicio, Insertar, Vista y Ayuda: estilos de título, negrita, cursiva, subrayado, listas, tareas, tablas editables (el ancho de las columnas se ajusta arrastrando el borde de la cabecera y el texto se ajusta a la celda), imágenes, vínculos (a páginas web o a carpetas, incluidas las de red), bloques de código con resaltado, búsqueda y zoom. Al escribir `/` en el editor se abre un menú de comandos para insertar títulos, listas, tablas y más.
 - Pegar imágenes: Ctrl+V con una captura en el portapapeles la guarda en `imagenes/aammdd_hhmm.png` junto al documento y deja el vínculo. El documento debe estar guardado. Las imágenes remotas (https) no se cargan hasta pulsar «Cargar» en cada una.
+- Tamaño y posición de las imágenes: arrastra el asa de la esquina inferior derecha para cambiar el tamaño (doble clic: tamaño original); el ancho se guarda como en Obsidian, en la descripción: `![texto|300](ruta)`. Arrastra la propia imagen por el texto para moverla; Esc cancela.
 - Varios documentos a la vez en pestañas. Se abren con Abrir, con doble clic o arrastrando los `.md` sobre la ventana. Se pueden cerrar todas; sin documentos abiertos aparece una pantalla con Nuevo y Abrir.
 - Panel de carpetas a la izquierda, abierto por defecto (se cierra con la cruz y se vuelve a abrir desde Vista) (Archivo > Abrir carpeta, o arrastrando una carpeta): muestra los `.md`, `.markdown` y `.txt`, se abren en pestaña con un clic y se recuerda la última carpeta. Escribir una ruta (`C:\Datos` o `\\servidor\recurso`) en la caja del panel y pulsar Intro abre el diálogo de carpeta ya situado en ella. Con el botón derecho: nuevo documento, nueva carpeta, renombrar, copiar, duplicar, pegar, copiar la ruta o el nombre y borrar. Borrar envía a la Papelera con confirmación; en unidades de red de Windows no hay Papelera, así que pide una confirmación aparte y el borrado es definitivo. Una carpeta solo se puede borrar si está vacía o contiene únicamente `.md`, `.markdown` y `.txt` (y subcarpetas con lo mismo), y solo en un disco fijo; va a la Papelera tras una confirmación. Cualquier otra cosa, ficheros ocultos incluidos, se borra desde el gestor de archivos. Nada se sobrescribe y solo se actúa dentro de la carpeta abierta.
 - Los títulos se pueden contraer con la flecha de su izquierda, como en Obsidian.
+- Dibujos con Excalidraw (Archivo > Nuevo dibujo). Un dibujo es una nota `.excalidraw.md` con el mismo formato que el plugin de Excalidraw de Obsidian, así que cada programa puede abrir los ficheros del otro. Un dibujo nuevo se crea al instante en la carpeta Descargas (se cambia en la pestaña Dibujo) y se guarda solo un momento después de cada cambio. La pestaña Dibujo ofrece además pantalla completa (F11), cuadrícula, modo zen y solo lectura, ver todo el dibujo, exportar a PNG o SVG e insertar el dibujo en la nota abierta como imagen en `imagenes/`. La biblioteca de formas de Excalidraw se conserva entre sesiones. Excalidraw solo se carga al abrir el primer dibujo.
 - Menús del botón derecho: en el editor (cortar, copiar, pegar, formato, convertir en título, lista o cita), sobre vínculos, imágenes, tablas (insertar y eliminar filas y columnas, alinear), bloques de código (copiar, cambiar el lenguaje) y títulos (contraer la sección); en las pestañas (cerrar, copiar ruta); y en el panel de carpetas.
 - Tres aspectos (PluMd, Windows y Mac), cada uno en modo claro y oscuro (Vista > Aspecto). Solo cambian el aspecto, no la distribución. Los skins son hojas CSS con un registro (`src/renderer/skins.js`), pensado para que los futuros plugins añadan los suyos.
 - Colores personalizables para títulos, negrita, texto, vínculos y más (Vista > Personalizar colores).
@@ -45,6 +48,10 @@ Los montajes NFS/SMB/sshfs todavía no se identifican como unidades de red: no s
 | --- | --- |
 | <img src="docs/screenshots/windows-claro.png" alt="Aspecto Windows en modo claro"> | <img src="docs/screenshots/mac-oscuro.png" alt="Aspecto Mac en modo oscuro"> |
 
+Un dibujo hecho con Excalidraw dentro de PluMd, con la pestaña Dibujo:
+
+<p align="center"><img src="docs/screenshots/plumd-excalidraw.png" alt="Un dibujo de Excalidraw abierto en PluMd, con la pestaña Dibujo de la cinta y el panel de carpetas"></p>
+
 Los documentos de las capturas son ficticios.
 
 ## Desarrollo
@@ -54,7 +61,7 @@ Requisitos: Node.js 24 o superior.
 ```bash
 npm install
 npm start          # compila y abre la aplicación
-npm test           # pruebas del acceso a ficheros, el pegado de imágenes y el modelo de tablas
+npm test           # pruebas del acceso a ficheros, el pegado de imágenes, el modelo de tablas y los dibujos
 npm run dist       # genera el instalador y la versión portable en release/
 npm run dist:linux # genera AppImage y .deb en release/
 ```
@@ -68,6 +75,7 @@ El empaquetado incluye todo `dist/**`, incluidos los bundles y las fuentes. Tras
 - `src/main/`: proceso principal de Electron (ventana, ficheros, portapapeles). `acceso.js` guarda las rutas reales, los accesos autorizados y la escritura atómica; `fsops.js` las operaciones del panel de carpetas.
 - `src/renderer/`: interfaz (editor CodeMirror 6, cinta, tablas, imágenes, diálogos, panel de carpetas, skins).
 - `src/renderer/plugins/` y `src/main/plugins.js`: sistema de plugins (registros, API, cargador, pantalla de plugins).
+- `src/renderer/draw/` y `src/renderer/drawView.js`: la vista de dibujo con Excalidraw (un paquete aparte que se carga bajo demanda). `src/renderer/excalidrawModelo.mjs` lee y escribe el formato `.excalidraw.md`; `src/main/dibujos.js` guarda la carpeta de los dibujos nuevos.
 - `plugins-ejemplo/` y `docs/`: plugins de ejemplo y documentación.
 - `tests/`: pruebas con `node:test`, que se ejecutan también en cada Pull Request.
 - `scripts/build.js`: empaquetado del renderer con esbuild.
@@ -88,4 +96,5 @@ Las propuestas de cambio (Pull Requests) y los avisos de errores (Issues) son bi
 ## Créditos
 
 - La tipografía Inter del aspecto Mac es de The Inter Project Authors, bajo licencia SIL Open Font License 1.1.
-- Electron, CodeMirror y Lezer, bajo licencia MIT.
+- Electron, CodeMirror, Lezer, Excalidraw, React y lz-string, bajo licencia MIT.
+- La vista de dibujo de Excalidraw incluye las tipografías que trae `@excalidraw/excalidraw` (Assistant, Cascadia Code, Comic Shanns, Excalifont, Liberation Sans, Lilita One, Nunito y Virgil), cada una con su propia licencia, casi todas SIL Open Font License 1.1.
