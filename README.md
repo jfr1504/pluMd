@@ -17,7 +17,6 @@ Go to the [releases](https://github.com/jfr1504/pluMd/releases/latest) page and 
 - Windows SmartScreen may show "Windows protected your PC", because the program is not signed yet. Click "More info" and then "Run anyway".
 - Each release includes `SHA256SUMS.txt` to check that the downloaded file is the published one. GitHub builds the `.exe` files from the code in this repository.
 - The portable version does not register `.md` files by itself. To open them with a double click, use "Open with" on a `.md` file once and choose PluMd, or use the installer.
-- Code signing: free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by the [SignPath Foundation](https://signpath.org/). See the [code signing policy](CODE_SIGNING_POLICY.md).
 
 ## Features
 
