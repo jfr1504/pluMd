@@ -65,3 +65,65 @@ test('relativeTo conserva el nombre de fichero cuando coincide con una carpeta',
     global.window = previousWindow;
   }
 });
+
+test('Linux conserva barras inversas en directorios, imágenes y vínculos relativos', () => {
+  const previousWindow = global.window;
+  global.window = { api: { platform: 'linux' } };
+  try {
+    assert.equal(dirname('/tmp/nota\\uno.md'), '/tmp');
+    assert.equal(dirname('/tmp/carpeta\\uno/nota.md'), '/tmp/carpeta\\uno');
+    assert.equal(fileUrl('/tmp/foto\\uno.png'), 'file:///tmp/foto%5Cuno.png');
+    assert.equal(fileUrl('/tmp/carpeta\\uno/foto.png'), 'file:///tmp/carpeta%5Cuno/foto.png');
+    setBaseDir('/tmp/carpeta\\uno');
+    assert.equal(resolveImageSrc('foto\\uno.png'), 'file:///tmp/carpeta%5Cuno/foto%5Cuno.png');
+    assert.equal(resolveImageSrc('foto%5Cuno.png'), 'file:///tmp/carpeta%5Cuno/foto%5Cuno.png');
+    assert.equal(resolveImageSrc('/tmp/foto\\uno.png'), 'file:///tmp/foto%5Cuno.png');
+    assert.equal(relativeTo('/tmp/carpeta\\uno/nota.md', '/tmp/carpeta\\uno/foto\\uno.png'), 'foto%5Cuno.png');
+    assert.equal(relativeTo('/tmp/carpeta\\uno/nota.md', '/tmp/carpeta/uno/foto.png'), '../carpeta/uno/foto.png');
+  } finally {
+    setBaseDir(null);
+    global.window = previousWindow;
+  }
+});
+
+test('Windows conserva separadores de imágenes y rutas UNC', () => {
+  const previousWindow = global.window;
+  global.window = { api: { platform: 'win32' } };
+  try {
+    assert.equal(fileUrl('C:\\docs\\foto.png'), 'file:///C:/docs/foto.png');
+    assert.equal(fileUrl('\\\\server\\share\\foto.png'), 'file://server/share/foto.png');
+    setBaseDir('C:\\docs');
+    assert.equal(resolveImageSrc('imagenes\\foto.png'), 'file:///C:/docs/imagenes/foto.png');
+    assert.equal(relativeTo('\\\\server\\share\\docs\\nota.md', '\\\\server\\share\\foto.png'), '../foto.png');
+  } finally {
+    setBaseDir(null);
+    global.window = previousWindow;
+  }
+});
+
+test('imagen Linux con barra inversa: vínculo relativo, URL y acceso al fichero real', { skip: process.platform === 'win32' }, async () => {
+  const path = require('node:path');
+  const dir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'plumd-image-'));
+  const previousWindow = global.window;
+  global.window = { api: { platform: 'linux' } };
+  try {
+    const folder = path.join(dir, 'carpeta\\uno');
+    fs.mkdirSync(folder);
+    const doc = path.join(folder, 'nota\\uno.md');
+    const img = path.join(folder, 'foto\\uno.png');
+    fs.writeFileSync(doc, '# Nota');
+    fs.writeFileSync(img, 'imagen ficticia');
+    const relative = relativeTo(doc, img);
+    setBaseDir(dirname(doc));
+    const url = resolveImageSrc(relative);
+    assert.equal(require('node:url').fileURLToPath(url), img);
+    const { resolveImagePath } = require('../src/main/acceso');
+    for (const source of [relative, url, img]) {
+      assert.equal(await resolveImagePath(doc, source, async () => true), fs.realpathSync(img));
+    }
+  } finally {
+    setBaseDir(null);
+    global.window = previousWindow;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

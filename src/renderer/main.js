@@ -211,7 +211,7 @@ cur = first;
 const view = new EditorView({ parent: $('editor'), state: first.state });
 
 const docName = (d) => {
-  if (d.file) return d.file.split(/[\\/]/).pop();
+  if (d.file) return d.file.split(window.api.platform === 'win32' ? /[\\/]/ : /\//).pop();
   const base = d.kind === 'draw' ? 'Dibujo sin título' : 'Documento sin título';
   return d.untitled > 1 ? `${base} ${d.untitled}` : base;
 };
@@ -824,7 +824,7 @@ async function drawExport(kind) {
     const base = docName(cur).replace(/\.excalidraw\.md$/i, '').replace(/\.md$/i, '');
     const r = await window.api.drawExport(`${base}.${kind}`, kind, data);
     if (!r.ok) throw new Error(r.error);
-    if (!r.canceled) notice(`Exportado como ${r.path.split(/[\\/]/).pop()}`);
+    if (!r.canceled) notice(`Exportado como ${r.path.split(window.api.platform === 'win32' ? /[\\/]/ : /\//).pop()}`);
   } catch (e) {
     toast(`No se pudo exportar el dibujo: ${e.message}`, true);
   }

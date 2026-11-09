@@ -8,7 +8,9 @@ export const API_VERSION = 1;
 
 const foldCase = (p) => window.api.platform === 'win32' ? p.toLowerCase() : p;
 const same = (a, b) => !!a && !!b && foldCase(String(a)) === foldCase(String(b));
-const norm = (p) => foldCase(String(p).replace(/\\/g, '/'));
+const norm = (p) => window.api.platform === 'win32'
+  ? String(p).replace(/\\/g, '/').toLowerCase()
+  : String(p);
 const inside = (child, parent) => {
   const c = norm(child);
   const p = norm(parent).replace(/\/+$/, '');

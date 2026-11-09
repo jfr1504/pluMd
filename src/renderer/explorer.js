@@ -1,3 +1,4 @@
+import { dirname } from './images.js';
 import { icon } from './icons.js';
 import { contextItems } from './plugins/registry.js';
 import { showMenu } from './contextmenu.js';
@@ -15,14 +16,8 @@ const NOT_FIXED_MSG = window.api.platform === 'linux'
   ? 'El borrado de carpetas no está disponible en Linux. Bórrala desde el gestor de archivos.'
   : 'Solo se pueden borrar carpetas en discos fijos. Bórrala desde el gestor de archivos.';
 
-const base = (p) => p.split(/[\\/]/).pop();
-const parent = (p) => {
-  const i = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'));
-  if (i < 0) return '';
-  if (i === 0) return p.slice(0, 1);
-  if (i === 2 && /^[a-zA-Z]:[\\/]/.test(p)) return p.slice(0, 3);
-  return p.slice(0, i);
-};
+const base = (p) => p.split(window.api.platform === 'win32' ? /[\\/]/ : /\//).pop();
+const parent = dirname;
 const same = (a, b) => !!a && !!b && (window.api.platform === 'win32'
   ? a.toLowerCase() === b.toLowerCase()
   : a === b);

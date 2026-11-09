@@ -136,7 +136,7 @@ export const askImage = ({ alt = '', url = '', existing = false }, getFile) =>
           const p = await window.api.pickImage();
           if (!p) return null;
           const file = getFile();
-          return file ? relativeTo(file, p) : p.replace(/\\/g, '/');
+          return file ? relativeTo(file, p) : (window.api.platform === 'win32' ? p.replace(/\\/g, '/') : p.replace(/\\/g, '%5C'));
         },
       },
       { id: 'alt', label: 'Texto alternativo', value: alt },
