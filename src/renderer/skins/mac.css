@@ -12,9 +12,9 @@
 }
 
 :root[data-skin='mac'] {
-  --font-ui: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
-  --font-text: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'SF Mono', Menlo, 'Cascadia Code', Consolas, monospace;
+  --font-ui: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Cantarell, Ubuntu, 'Noto Sans', system-ui, sans-serif;
+  --font-text: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Cantarell, Ubuntu, 'Noto Sans', system-ui, sans-serif;
+  --font-mono: 'SF Mono', Menlo, 'Cascadia Code', Consolas, 'DejaVu Sans Mono', 'Noto Sans Mono', monospace;
   --r-s: 6px;
   --r-m: 8px;
   --r-l: 12px;

@@ -4,6 +4,7 @@ const path = require('path');
 const { createFsOps } = require('./fsops');
 const { MD_RE, DENIED, createAccess, writeAtomic, savePastedImage, resolveImagePath } = require('./acceso');
 const { readClipboardPng } = require('./portapapeles');
+const { fileFromArgs } = require('./open-args');
 const { createPlugins, registerScheme } = require('./plugins');
 const { createDibujos, esPng } = require('./dibujos');
 
@@ -16,11 +17,6 @@ if (!gotLock) app.quit();
 
 let win = null;
 let pendingFile = null;
-
-function fileFromArgs(argv) {
-  const args = app.isPackaged ? argv.slice(1) : argv.slice(2);
-  return args.find((a) => !a.startsWith('-') && /\.(md|markdown|txt)$/i.test(a) && fs.existsSync(a)) || null;
-}
 
 async function sendOpen(file) {
   if (access) await access.allowFile(file);
@@ -69,7 +65,7 @@ function createWindow() {
 }
 
 app.on('second-instance', (_e, argv) => {
-  const f = fileFromArgs(argv);
+  const f = fileFromArgs(argv, app.isPackaged);
   if (win) {
     if (win.isMinimized()) win.restore();
     win.focus();
@@ -92,7 +88,7 @@ app.whenReady().then(() => {
   dibujos = createDibujos({ settingsFile: path.join(app.getPath('userData'), 'dibujos.json'), defaultDir: app.getPath('downloads'), libraryFile: path.join(app.getPath('userData'), 'biblioteca-dibujos.json') });
   plugins = createPlugins({ userDataDir: app.getPath('userData'), argv: process.argv });
   plugins.installProtocol(protocol, net);
-  pendingFile = fileFromArgs(process.argv);
+  pendingFile = fileFromArgs(process.argv, app.isPackaged);
   if (pendingFile) access.allowFile(pendingFile);
   createWindow();
 });
@@ -107,7 +103,10 @@ const guard = (fn) => async (_e, ...args) => {
   try {
     return await fn(...args);
   } catch (e) {
-    return { ok: false, error: e.message };
+    const error = e.message.startsWith('Failed to move item to trash')
+    ? 'No se ha podido mover el elemento a la Papelera.'
+    : e.message;
+    return { ok: false, error: error };
   }
 };
 

@@ -72,7 +72,7 @@ function imageGroup(d, img) {
   return [
     { label: 'Copiar imagen', icon: 'copy', disabled: unavailable, title: why, run: () => runImage(window.api.imageCopy, 'Imagen copiada.') },
     { label: 'Copiar dirección', icon: 'link', run: async () => { await d.copyText(img.url); d.notify('Dirección copiada.'); } },
-    { label: 'Mostrar en el Explorador de Windows', icon: 'reveal', disabled: unavailable, title: why, run: () => runImage(window.api.imageReveal) },
+    { label: 'Mostrar en el gestor de archivos', icon: 'reveal', disabled: unavailable, title: why, run: () => runImage(window.api.imageReveal) },
     { label: 'Editar texto alternativo y ruta…', icon: 'pencil', run: () => d.run('image') },
     {
       label: 'Eliminar imagen',

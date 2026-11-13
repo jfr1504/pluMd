@@ -7,7 +7,7 @@ const { createFsOps, msg } = require('../src/main/fsops');
 
 // Todo ocurre en carpetas temporales locales. Papelera, tipo de unidad y borrado definitivo van simulados:
 // ninguna prueba toca una unidad de red. `drive` es el tipo de unidad de Windows (3 fijo, 2 extraíble, 4 red, null desconocido).
-function setup({ network = false, drive = network ? 4 : 3 } = {}) {
+function setup({ network = false, drive = network ? 4 : 3, readMounts = async () => 'local / ext4 rw 0 0\n' } = {}) {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'plumd-test-'));
   const root = path.join(base, 'raiz');
   const fuera = path.join(base, 'fuera');
@@ -17,6 +17,7 @@ function setup({ network = false, drive = network ? 4 : 3 } = {}) {
   const ops = createFsOps({
     trash: async (p) => calls.trash.push(p),
     driveType: async () => drive,
+    readMounts,
     unlink: async (p) => calls.unlink.push(p),
   });
   return { base, root, fuera, ops, calls, done: () => fs.rmSync(base, { recursive: true, force: true }) };
@@ -43,8 +44,13 @@ test('nombres no válidos o reservados se rechazan', async () => {
   const t = setup();
   try {
     await t.ops.setRoot(t.root);
-    for (const n of ['', '..', 'a/b', 'a:b', 'con', 'nul.md', 'x'.repeat(250)]) {
+    const invalid = ['', '..', 'a/b', 'a:b', 'a\\b', 'x'.repeat(250)];
+    if (process.platform === 'win32') invalid.push('con', 'nul.md');
+    for (const n of invalid) {
       assert.equal((await t.ops.create(t.root, n)).ok, false, `debería rechazar «${n}»`);
+    }
+    if (process.platform !== 'win32') {
+      assert.equal((await t.ops.create(t.root, 'con')).ok, true);
     }
   } finally {
     t.done();
@@ -63,6 +69,23 @@ test('renombrar no pisa otro documento; copiar añade " - copia"', async () => {
     assert.equal(c.ok, true);
     assert.equal(path.basename(c.path), 'a - copia.md');
     assert.equal(fs.readFileSync(path.join(t.root, 'a.md'), 'utf8'), 'A');
+  } finally {
+    t.done();
+  }
+});
+
+test('en Linux renombrar conserva la distinción de mayúsculas y no pisa archivos', { skip: process.platform === 'win32' }, async () => {
+  const t = setup();
+  try {
+    await t.ops.setRoot(t.root);
+    const lower = path.join(t.root, 'nota.md');
+    const upper = path.join(t.root, 'NOTA.md');
+    fs.writeFileSync(lower, 'minúsculas');
+    fs.writeFileSync(upper, 'mayúsculas');
+    const r = await t.ops.rename(lower, 'NOTA.md');
+    assert.equal(r.ok, false);
+    assert.equal(fs.readFileSync(lower, 'utf8'), 'minúsculas');
+    assert.equal(fs.readFileSync(upper, 'utf8'), 'mayúsculas');
   } finally {
     t.done();
   }
@@ -118,7 +141,24 @@ test('borrar en local envía a la Papelera y nunca borra carpetas ni otros tipos
   }
 });
 
-test('en red el borrado exige confirmación expresa y es definitivo', async () => {
+test('Linux usa la papelera del escritorio sin tratar rutas locales como unidades de red', { skip: process.platform === 'win32' }, async () => {
+  const t = setup({ network: true });
+  try {
+    const root = await t.ops.setRoot(t.root);
+    assert.equal(root.network, false);
+    const f = path.join(t.root, 'a.md');
+    fs.writeFileSync(f, 'A');
+    const r = await t.ops.remove(f);
+    assert.equal(r.ok, true);
+    assert.equal(r.permanent, false);
+    assert.deepEqual(t.calls.trash, [f]);
+    assert.deepEqual(t.calls.unlink, []);
+  } finally {
+    t.done();
+  }
+});
+
+test('en red el borrado exige confirmación expresa y es definitivo', { skip: process.platform !== 'win32' }, async () => {
   const t = setup({ network: true });
   try {
     const net = await t.ops.setRoot(t.root);
@@ -139,7 +179,7 @@ test('en red el borrado exige confirmación expresa y es definitivo', async () =
   }
 });
 
-test('si no se puede saber el tipo de unidad se trata como red', async () => {
+test('si no se puede saber el tipo de unidad se trata como red', { skip: process.platform !== 'win32' }, async () => {
   const t = setup();
   try {
     const ops = createFsOps({ trash: async () => {}, driveType: async () => null, unlink: async () => {} });
@@ -159,12 +199,14 @@ test('crear carpeta: un solo nivel, sin pisar nada y dentro de la raíz', async 
     const a = await t.ops.createDir(t.root, 'Notas');
     assert.equal(a.ok, true);
     assert.equal(fs.statSync(a.path).isDirectory(), true);
-    assert.equal((await t.ops.createDir(t.root, 'notas')).ok, false, 'ya existe (Windows no distingue mayúsculas)');
+    assert.equal((await t.ops.createDir(t.root, 'notas')).ok, process.platform !== 'win32', 'respeta la comparación de nombres del sistema');
     fs.writeFileSync(path.join(t.root, 'doc.md'), 'D');
     assert.equal((await t.ops.createDir(t.root, 'doc.md')).ok, false);
     assert.equal(fs.readFileSync(path.join(t.root, 'doc.md'), 'utf8'), 'D');
     assert.equal((await t.ops.createDir(t.fuera, 'x')).ok, false);
-    for (const n of ['', '..', 'a/b', 'a\\b', '.oculta', 'punto.', 'con', 'node_modules', 'x'.repeat(250)]) {
+    const invalid = ['', '..', 'a/b', 'a\\b', 'c:d', '.oculta', 'punto.', 'node_modules', 'x'.repeat(250)];
+    if (process.platform === 'win32') invalid.push('con');
+    for (const n of invalid) {
       assert.equal((await t.ops.createDir(t.root, n)).ok, false, `debería rechazar «${n}»`);
     }
     assert.equal(fs.existsSync(path.join(t.root, 'a')), false);
@@ -173,7 +215,7 @@ test('crear carpeta: un solo nivel, sin pisar nada y dentro de la raíz', async 
   }
 });
 
-test('borrar carpeta: a la Papelera; nunca la raíz, un enlace, una de fuera ni en red', async () => {
+test('borrar carpeta: a la Papelera; nunca la raíz, un enlace, una de fuera ni en red', { skip: process.platform !== 'win32' }, async () => {
   const t = setup();
   try {
     await t.ops.setRoot(t.root);
@@ -217,7 +259,7 @@ test('borrar carpeta en red no se hace desde la aplicación', async () => {
   }
 });
 
-test('borrar carpeta solo en discos fijos: no en extraíbles ni si no se sabe el tipo', async () => {
+test('borrar carpeta solo en discos fijos: no en extraíbles ni si no se sabe el tipo', { skip: process.platform !== 'win32' }, async () => {
   for (const [drive, permitido] of [[3, true], [2, false], [4, false], [5, false], [null, false]]) {
     const t = setup({ drive });
     try {
@@ -234,7 +276,7 @@ test('borrar carpeta solo en discos fijos: no en extraíbles ni si no se sabe el
   }
 });
 
-test('borrar carpeta: vacía, o solo con documentos de texto y subcarpetas con lo mismo', async () => {
+test('borrar carpeta: vacía, o solo con documentos de texto y subcarpetas con lo mismo', { skip: process.platform !== 'win32' }, async () => {
   const t = setup();
   try {
     await t.ops.setRoot(t.root);
@@ -255,7 +297,7 @@ test('borrar carpeta: vacía, o solo con documentos de texto y subcarpetas con l
   }
 });
 
-test('borrar carpeta con ficheros que el panel no muestra se niega y dice cuántos son', async () => {
+test('borrar carpeta con ficheros que el panel no muestra se niega y dice cuántos son', { skip: process.platform !== 'win32' }, async () => {
   const t = setup();
   try {
     await t.ops.setRoot(t.root);
@@ -281,7 +323,7 @@ test('borrar carpeta con ficheros que el panel no muestra se niega y dice cuánt
   }
 });
 
-test('borrar carpeta: un solo fichero oculto va en singular, un enlace cuenta y no se sigue', async () => {
+test('borrar carpeta: un solo fichero oculto va en singular, un enlace cuenta y no se sigue', { skip: process.platform !== 'win32' }, async () => {
   const t = setup();
   try {
     await t.ops.setRoot(t.root);
@@ -299,4 +341,127 @@ test('borrar carpeta: un solo fichero oculto va en singular, un enlace cuenta y 
   } finally {
     t.done();
   }
+});
+
+test('Linux no da por fijo un montaje desconocido ni borra carpetas', { skip: process.platform === 'win32' }, async () => {
+  const t = setup();
+  try {
+    const root = await t.ops.setRoot(t.root);
+    assert.equal(root.fixed, false);
+    assert.equal(root.network, false);
+    const dir = path.join(t.root, 'carpeta');
+    fs.mkdirSync(dir);
+    const expected = {
+      ok: false,
+      error: process.platform === 'linux'
+        ? 'El borrado de carpetas no está disponible en Linux. Bórrala desde el gestor de archivos.'
+        : msg.notFixed,
+    };
+    assert.deepEqual(await t.ops.canRemoveDir(dir), expected);
+    assert.deepEqual(await t.ops.removeDir(dir), expected);
+    assert.deepEqual(t.calls.trash, []);
+    assert.deepEqual(t.calls.unlink, []);
+    assert.equal(fs.existsSync(dir), true);
+  } finally {
+    t.done();
+  }
+});
+
+test('Linux no recurre al borrado permanente si falla la Papelera', { skip: process.platform === 'win32' }, async () => {
+  const t = setup();
+  try {
+    const ops = createFsOps({
+      trash: async () => { throw new Error('Papelera no disponible'); },
+      unlink: async (p) => t.calls.unlink.push(p),
+    });
+    await ops.setRoot(t.root);
+    const file = path.join(t.root, 'nota.md');
+    fs.writeFileSync(file, 'conservar');
+    assert.deepEqual(await ops.remove(file, { permanent: true }), { ok: false, error: 'No se pudo enviar el documento a la Papelera; no se ha borrado. (Papelera no disponible)' });
+    assert.deepEqual(t.calls.unlink, []);
+    assert.equal(fs.readFileSync(file, 'utf8'), 'conservar');
+  } finally {
+    t.done();
+  }
+});
+
+const linuxOnly = { skip: process.platform !== 'linux' };
+const mountEscape = (p) => p.replace(/\\/g, '\\134').replace(/ /g, '\\040').replace(/\t/g, '\\011').replace(/\n/g, '\\012');
+
+for (const type of ['nfs', 'nfs4', 'cifs', 'smb3', 'smbfs', 'fuse.sshfs', 'fuse.gvfsd-fuse', 'davfs', 'davfs2', 'fuse.rclone']) {
+  test(`Linux detecta ${type} y exige confirmación antes de borrar`, linuxOnly, async () => {
+    const t = setup({ readMounts: async () => `server / ${type} rw 0 0\n` });
+    try {
+      assert.equal((await t.ops.setRoot(t.root)).network, true);
+      const file = path.join(t.root, 'nota.md');
+      fs.writeFileSync(file, 'conservar');
+      assert.equal((await t.ops.remove(file)).needsPermanent, true);
+      assert.deepEqual(t.calls.unlink, []);
+      assert.deepEqual(t.calls.trash, []);
+      assert.deepEqual(await t.ops.remove(file, { permanent: true }), { ok: true, permanent: true });
+      assert.deepEqual(t.calls.unlink, [fs.realpathSync(file)]);
+      assert.deepEqual(t.calls.trash, []);
+    } finally { t.done(); }
+  });
+}
+
+test('Linux elige el montaje más específico y respeta límites de carpeta', linuxOnly, async () => {
+  let table;
+  const t = setup({ readMounts: async () => table });
+  try {
+    const nested = path.join(t.root, 'local');
+    const sibling = t.root + '-otra';
+    fs.mkdirSync(nested);
+    fs.mkdirSync(sibling);
+    table = `local / ext4 rw 0 0\nlocal ${mountEscape(nested)} ext4 rw 0 0\nserver ${mountEscape(t.root)} nfs4 rw 0 0\n`;
+    assert.equal(await t.ops.isNetworkPath(t.root), true);
+    assert.equal(await t.ops.isNetworkPath(nested), false);
+    assert.equal(await t.ops.isNetworkPath(sibling), false);
+    const link = path.join(sibling, 'atajo');
+    fs.symlinkSync(t.root, link);
+    assert.equal(await t.ops.isNetworkPath(link), true, 'usa el destino real del enlace');
+    table = 'local / ext4 rw 0 0\n';
+    assert.equal(await t.ops.isNetworkPath(t.root), false, 'recoge cambios sin caché permanente');
+  } finally { t.done(); }
+});
+
+test('Linux decodifica espacios, tabuladores, saltos y barras inversas de los montajes', linuxOnly, async () => {
+  let table;
+  const t = setup({ readMounts: async () => table });
+  try {
+    for (const name of ['con espacio', 'con\ttab', 'con\nsalto', 'con\\barra']) {
+      const dir = path.join(t.root, name);
+      fs.mkdirSync(dir);
+      table = `local / ext4 rw 0 0\nserver ${mountEscape(dir)} cifs rw 0 0\n`;
+      assert.equal(await t.ops.isNetworkPath(dir), true, name);
+    }
+  } finally { t.done(); }
+});
+
+test('Linux bloquea el borrado si no puede determinar el montaje, incluso con permanent', linuxOnly, async () => {
+  for (const readMounts of [
+    async () => { throw new Error('EACCES'); },
+    async () => '',
+    async () => 'malformado',
+    async () => 'source / fuse.desconocido rw 0 0\n',
+    async () => 'server /otro nfs rw 0 0\n',
+  ]) {
+    const t = setup({ readMounts });
+    try {
+      assert.equal((await t.ops.setRoot(t.root)).network, true);
+      const file = path.join(t.root, 'nota.md');
+      fs.writeFileSync(file, 'conservar');
+      for (const permanent of [false, true]) {
+        assert.deepEqual(await t.ops.remove(file, { permanent }), { ok: false, error: msg.unknownMount });
+      }
+      assert.equal(fs.readFileSync(file, 'utf8'), 'conservar');
+      assert.deepEqual(t.calls.unlink, []);
+      assert.deepEqual(t.calls.trash, []);
+    } finally { t.done(); }
+  }
+});
+
+test('la clasificación de Windows no consulta la tabla de montajes Linux', async () => {
+  const ops = createFsOps({ platform: 'win32', readMounts: async () => { throw new Error('No debe consultarse'); } });
+  assert.equal(await ops.isNetworkPath('\\\\server\\share\\nota.md'), true);
 });

@@ -1,3 +1,4 @@
+import { dirname } from './images.js';
 import { icon } from './icons.js';
 import { contextItems } from './plugins/registry.js';
 import { showMenu } from './contextmenu.js';
@@ -11,11 +12,15 @@ const store = {
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } },
 };
 
-const NOT_FIXED_MSG = 'Solo se pueden borrar carpetas en discos fijos. Bórrala desde el Explorador de Windows.';
+const NOT_FIXED_MSG = window.api.platform === 'linux'
+  ? 'El borrado de carpetas no está disponible en Linux. Bórrala desde el gestor de archivos.'
+  : 'Solo se pueden borrar carpetas en discos fijos. Bórrala desde el gestor de archivos.';
 
-const base = (p) => p.split(/[\\/]/).pop();
-const parent = (p) => p.replace(/[\\/][^\\/]*$/, '');
-const same = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+const base = (p) => p.split(window.api.platform === 'win32' ? /[\\/]/ : /\//).pop();
+const parent = dirname;
+const same = (a, b) => !!a && !!b && (window.api.platform === 'win32'
+  ? a.toLowerCase() === b.toLowerCase()
+  : a === b);
 
 export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, confirm, notify, onVisibility }) {
   const $ = (id) => document.getElementById(id);
@@ -262,7 +267,8 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
   }
 
   // Una ruta (C:\carpeta o \servidor\recurso) no es un filtro: se usa para cambiar de carpeta con Intro.
-  const isPathText = (t) => /^[a-zA-Z]:[\\/]/.test(t) || /^\\\\[^\\]/.test(t);
+  const isPathText = (t) => /^[a-zA-Z]:[\\/]/.test(t) || /^\\\\[^\\]/.test(t) ||
+    (window.api.platform !== 'win32' && t.startsWith('/'));
 
   function applyFilter() {
     const q = isPathText(filter.value.trim()) ? '' : filter.value.trim().toLowerCase();
@@ -494,6 +500,7 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
     if (node.dataset.dir === '1') return removeFolder(p);
     const dirty = isOpenDirty(p);
     const warnDirty = dirty ? ' Ojo: tiene cambios sin guardar en una pestaña abierta.' : '';
+    const trashName = window.api.platform === 'win32' ? 'Papelera de reciclaje' : 'Papelera';
     const ask = (permanent) => confirm(permanent
       ? {
           title: 'Eliminar definitivamente',
@@ -503,7 +510,7 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
         }
       : {
           title: 'Mover a la Papelera',
-          message: `«${base(p)}» se moverá a la Papelera de reciclaje, de donde se puede recuperar.${warnDirty}`,
+          message: `«${base(p)}» se moverá a la ${trashName}, de donde se puede recuperar.${warnDirty}`,
           okLabel: 'Mover a la Papelera',
           danger: true,
         });
@@ -561,7 +568,7 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
     }
     items.push('-');
     items.push({ label: 'Actualizar', icon: 'refresh', run: () => (isDir ? refreshDir(node.dataset.path) : refresh()) });
-    if (node) items.push({ label: 'Mostrar en el Explorador de Windows', icon: 'reveal', run: () => window.api.reveal(node.dataset.path) });
+    if (node) items.push({ label: window.api.platform === 'win32' ? 'Mostrar en el Explorador de Windows' : 'Mostrar en el gestor de archivos', icon: 'reveal', run: () => window.api.reveal(node.dataset.path) });
     return items;
   }
 

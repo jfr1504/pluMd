@@ -8,12 +8,19 @@ const { pathToFileURL } = require('url');
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'plumd-test-'));
 const rm = (d) => fs.rmSync(d, { recursive: true, force: true });
+const winKey = (p) => key(p, 'win32');
 
 test('within distingue carpeta propia de otra con el mismo prefijo', () => {
-  assert.equal(within(key('C:\\a\\b'), key('C:\\a')), true);
-  assert.equal(within(key('C:\\a'), key('C:\\a')), true);
-  assert.equal(within(key('C:\\ab'), key('C:\\a')), false);
-  assert.equal(within(key('C:\\a\\b'), key('C:\\')), true);
+  assert.equal(within(winKey('C:\\a\\b'), winKey('C:\\a'), 'win32'), true);
+  assert.equal(within(winKey('C:\\a'), winKey('C:\\a'), 'win32'), true);
+  assert.equal(within(winKey('C:\\ab'), winKey('C:\\a'), 'win32'), false);
+  assert.equal(within(winKey('C:\\a\\b'), winKey('C:\\'), 'win32'), true);
+});
+
+test('las rutas distinguen mayúsculas en Linux', { skip: process.platform === 'win32' }, () => {
+  const root = key('/tmp/Documentos');
+  assert.equal(within(key('/tmp/Documentos/nota.md'), root), true);
+  assert.equal(within(key('/tmp/documentos/nota.md'), root), false);
 });
 
 test('realPath resuelve una junction y un fichero que aún no existe', async () => {
