@@ -100,7 +100,7 @@
     "linux": {
       "category": "Office",
       "icon": "build/icon.png",
-      "maintainer": "Jorge Ferreira Rey",
+      "maintainer": "Jorge Ferreira Rey <96972785+jfr1504@users.noreply.github.com>",
       "syncDesktopName": true,
       "target": [
         "AppImage",
