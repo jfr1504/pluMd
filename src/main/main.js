@@ -148,6 +148,7 @@ ipcMain.handle('fs:setRoot', guard(async (dir) => {
   return { ok: true, ...(await ops.setRoot(dir)) };
 }));
 ipcMain.handle('fs:listDir', guard(async (dir) => ({ ok: true, entries: await ops.listDir(dir) })));
+ipcMain.handle('fs:listAll', guard(async () => ({ ok: true, ...(await ops.listAll()) })));
 ipcMain.handle('fs:create', guard((dir, name) => ops.create(dir, name)));
 ipcMain.handle('fs:rename', guard((p, name) => ops.rename(p, name)));
 ipcMain.handle('fs:copy', guard((src, dir) => ops.copy(src, dir)));

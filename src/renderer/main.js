@@ -24,6 +24,7 @@ import { on, emit, items, removeItem, reportError, registerCommand, getCommand, 
 import { blockField, refreshBlocks } from './plugins/blockRenderers.js';
 import { initPlugins, startPlugins, reloadPlugins, failedCount } from './plugins/loader.js';
 import { openPluginsDialog, openPalette } from './plugins/ui.js';
+import { openQuickOpen } from './quickOpen.js';
 import { initSidebarPanels } from './plugins/sidebar.js';
 import { initStatusItems } from './plugins/statusbar.js';
 import { slashMenu } from './slashMenu.js';
@@ -656,6 +657,10 @@ Object.assign(commands, {
     toast('Plugins recargados.');
   },
   palette: () => openPalette(ribbon.entries()),
+  'quick-open': () => openQuickOpen({
+    abiertos: [cur, ...docs.filter((d) => d !== cur)].filter((d) => d && d.file).map((d) => d.file),
+    onOpen: openFile,
+  }),
 });
 for (const k of listSkins()) commands[`skin-${k.id}`] = () => chooseSkin(k.id);
 for (const n of [1, 2, 3, 4, 5, 6]) commands[`style-h${n}`] = (v) => setParagraphStyle(v, `h${n}`);
@@ -1026,6 +1031,7 @@ window.addEventListener('keydown', async (e) => {
     activate(docs[(i + (e.shiftKey ? docs.length - 1 : 1)) % docs.length]);
   }
   else if (k === 'p' && e.shiftKey) { e.preventDefault(); commands.palette(); }
+  else if (k === 'p') { e.preventDefault(); commands['quick-open'](); }
   else if (k === 'e' && e.shiftKey) { e.preventDefault(); explorer.toggle(); }
   else if (cur && cur.kind === 'draw' && ['e', '=', '+', '-', '0'].includes(k)) return; // atajos del lienzo
   else if (k === 'o' && e.shiftKey) { e.preventDefault(); explorer.openFolderDialog(); }
