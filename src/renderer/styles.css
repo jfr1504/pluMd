@@ -5,7 +5,7 @@
   --r-l: 10px;
   --shadow-pop: 0 8px 30px rgba(0,0,0,.3);
   --shadow-dlg: 0 10px 40px rgba(0,0,0,.35);
-  --font-ui: 'Segoe UI', system-ui, sans-serif;
+  --font-ui: 'Segoe UI', Cantarell, Ubuntu, 'Noto Sans', system-ui, sans-serif;
   /* Colores del tema claro */
   --bg: #ffffff;
   --bg-2: #f4f4f6;
@@ -16,8 +16,8 @@
   --accent: #5b4bdb;
   --accent-soft: #e8e5fb;
   --code-bg: #f1f1f4;
-  --font-text: 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'Cascadia Code', Consolas, monospace;
+  --font-text: 'Segoe UI', Cantarell, Ubuntu, 'Noto Sans', system-ui, sans-serif;
+  --font-mono: 'Cascadia Code', Consolas, 'DejaVu Sans Mono', 'Noto Sans Mono', monospace;
   --selection: #c9c2ff;
   --banner-bg: #fff4d6;
   --banner-border: #e8d48a;

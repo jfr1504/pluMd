@@ -2,9 +2,9 @@
    Solo redefine tokens y ajusta formas; no cambia la distribución de la interfaz. */
 
 :root[data-skin='windows'] {
-  --font-ui: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
-  --font-text: 'Aptos', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'Cascadia Mono', 'Cascadia Code', Consolas, monospace;
+  --font-ui: 'Segoe UI Variable Text', 'Segoe UI', Cantarell, Ubuntu, 'Noto Sans', system-ui, sans-serif;
+  --font-text: 'Aptos', 'Segoe UI Variable Text', 'Segoe UI', Cantarell, Ubuntu, 'Noto Sans', system-ui, sans-serif;
+  --font-mono: 'Cascadia Mono', 'Cascadia Code', Consolas, 'DejaVu Sans Mono', 'Noto Sans Mono', monospace;
   --r-s: 4px;
   --r-m: 4px;
   --r-l: 8px;

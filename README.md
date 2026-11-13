@@ -21,7 +21,7 @@ Go to the [releases](https://github.com/jfr1504/pluMd/releases/latest) page and 
 
 ## Linux
 
-Download `PluMd-X.Y.Z-x86_64.AppImage` or `PluMd-X.Y.Z-amd64.deb` from the releases. The AppImage needs executable permissions (`chmod +x PluMd-*.AppImage`) and FUSE 2 compatibility; use the `.deb` if FUSE is unavailable.
+Linux support is **experimental and community-supported**. The primary format for Debian and Ubuntu is `PluMd-X.Y.Z-amd64.deb`; `PluMd-X.Y.Z-x86_64.AppImage` is the portable alternative. Download the available packages from the releases. The AppImage needs executable permissions (`chmod +x PluMd-*.AppImage`) and FUSE 2 compatibility; use the `.deb` if FUSE is unavailable.
 
 On Ubuntu 24.04 and later, AppArmor may prevent the AppImage from starting by restricting the user namespaces required by Electron's sandbox, even with FUSE installed. See the [Ubuntu documentation](https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/) to configure an application-specific profile. Do not disable Electron's sandbox or the global AppArmor restrictions.
 
@@ -70,7 +70,7 @@ npm run dist:linux # builds AppImage and .deb packages in release/
 
 Windows drive detection and folder deletion tests run only on Windows (`npm test`); Linux tests run on Linux. PR CI builds and tests both platforms.
 
-Packaging includes all of `dist/**`, including bundles and fonts. After integrating PR #14 (Excalidraw), check that its build generates `draw.js` and fonts under `dist/` and that both are present in the Linux package.
+Packaging includes all of `dist/**`, including bundles and fonts. The build generates `dist/draw.js` and the Excalidraw fonts under `dist/excalidraw-assets/fonts`. When validating a release, check that both resources are included in the AppImage and the `.deb`.
 
 ## Structure
 
