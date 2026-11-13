@@ -204,8 +204,8 @@ test('crear carpeta: un solo nivel, sin pisar nada y dentro de la raíz', async 
     assert.equal((await t.ops.createDir(t.root, 'doc.md')).ok, false);
     assert.equal(fs.readFileSync(path.join(t.root, 'doc.md'), 'utf8'), 'D');
     assert.equal((await t.ops.createDir(t.fuera, 'x')).ok, false);
-    const invalid = ['', '..', 'a/b', '.oculta', 'punto.', 'node_modules', 'x'.repeat(250)];
-    if (process.platform === 'win32') invalid.push('a\\b', 'con');
+    const invalid = ['', '..', 'a/b', 'a\\b', 'c:d', '.oculta', 'punto.', 'node_modules', 'x'.repeat(250)];
+    if (process.platform === 'win32') invalid.push('con');
     for (const n of invalid) {
       assert.equal((await t.ops.createDir(t.root, n)).ok, false, `debería rechazar «${n}»`);
     }
@@ -377,7 +377,7 @@ test('Linux no recurre al borrado permanente si falla la Papelera', { skip: proc
     await ops.setRoot(t.root);
     const file = path.join(t.root, 'nota.md');
     fs.writeFileSync(file, 'conservar');
-    assert.deepEqual(await ops.remove(file, { permanent: true }), { ok: false, error: 'Papelera no disponible' });
+    assert.deepEqual(await ops.remove(file, { permanent: true }), { ok: false, error: 'No se pudo enviar el documento a la Papelera; no se ha borrado. (Papelera no disponible)' });
     assert.deepEqual(t.calls.unlink, []);
     assert.equal(fs.readFileSync(file, 'utf8'), 'conservar');
   } finally {

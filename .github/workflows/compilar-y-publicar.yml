@@ -1,7 +1,7 @@
 name: Compilar y publicar
 
 # - En cada Pull Request hacia main: compila los paquetes de Windows y Linux y los guarda 7 días como artefactos.
-# - Al subir una etiqueta vX.Y.Z: publica los paquetes disponibles de cada plataforma con sus sumas.
+# - Al subir una etiqueta vX.Y.Z: publica Windows y, si está disponible, Linux con sus sumas.
 on:
   pull_request:
     branches: [main]
@@ -101,8 +101,8 @@ jobs:
           retention-days: 7
 
   publish:
-    # !cancelled() evita el success() implícito: ninguna plataforma bloquea la publicación de la otra.
-    if: ${{ startsWith(github.ref, 'refs/tags/') && !cancelled() && (needs.windows.result == 'success' || needs.linux.result == 'success') }}
+    # !cancelled() permite publicar Windows aunque falle Linux.
+    if: ${{ startsWith(github.ref, 'refs/tags/') && !cancelled() && needs.windows.result == 'success' }}
     needs: [windows, linux]
     runs-on: ubuntu-latest
     permissions:
@@ -111,8 +111,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4
-        if: ${{ needs.windows.result == 'success' }}
-        continue-on-error: true
         with:
           name: PluMd-Windows
           path: release
@@ -132,13 +130,14 @@ jobs:
           set -Eeuo pipefail
           mkdir -p release
           cd release
-          # Ambas plataformas son opcionales, pero debe haber al menos un paquete.
           shopt -s nullglob
-          packages=(PluMd-Setup-*.exe PluMd-portable-*.exe PluMd-*.AppImage PluMd-*.deb)
-          if (( ${#packages[@]} == 0 )); then
-            echo "No hay paquetes disponibles para publicar." >&2
+          setup=(PluMd-Setup-*.exe)
+          portable=(PluMd-portable-*.exe)
+          if (( ${#setup[@]} == 0 || ${#portable[@]} == 0 )); then
+            echo "Faltan paquetes de Windows para publicar." >&2
             exit 1
           fi
+          packages=("${setup[@]}" "${portable[@]}" PluMd-*.AppImage PluMd-*.deb)
           sha256sum "${packages[@]}" > SHA256SUMS.txt
           gh release create "$GITHUB_REF_NAME" \
             "${packages[@]}" SHA256SUMS.txt \

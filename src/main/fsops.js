@@ -16,7 +16,6 @@ const { MD_RE, key: norm, within, realPath } = require('./acceso');
 
 const SKIP_DIRS = new Set(['node_modules', '$recycle.bin', 'system volume information']);
 const INVALID_WINDOWS = /[<>:"/\\|?*\x00-\x1f]/;
-const INVALID_POSIX = /[/\x00-\x1f]/;
 const RESERVED_WINDOWS = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
 const FIXED_DRIVE = 3; // tipos de unidad de Windows: 3 = disco fijo, 4 = red
 const NETWORK_DRIVE = 4;
@@ -151,7 +150,7 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
   // empezar por punto ni llamarse como las carpetas que el panel oculta (no se vería después de crearla).
   function cleanDirName(raw) {
     const name = String(raw || '').trim();
-    if (!name || name === '.' || name === '..' || (platform === 'win32' ? INVALID_WINDOWS : INVALID_POSIX).test(name) || (platform === 'win32' && RESERVED_WINDOWS.test(name)) || name.length > 200) return null;
+    if (!name || name === '.' || name === '..' || INVALID_WINDOWS.test(name) || (platform === 'win32' && RESERVED_WINDOWS.test(name)) || name.length > 200) return null;
     if (isHidden(name) || name.endsWith('.')) return null;
     return name;
   }
@@ -309,7 +308,13 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
         if (net && !permanent) return { ok: false, error: msg.network, needsPermanent: true };
         if (!(await fs.promises.stat(real)).isFile()) return { ok: false, error: msg.notDoc };
         if (net) await unlink(real);
-        else await trash(p);
+        else {
+          try {
+            await trash(p);
+          } catch (e) {
+            return fail(`No se pudo enviar el documento a la Papelera; no se ha borrado. (${e.message})`);
+          }
+        }
         return { ok: true, permanent: net };
       } catch (e) {
         return { ok: false, error: e.message };
