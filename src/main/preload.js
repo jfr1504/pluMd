@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('api', {
   isDir: (p) => ipcRenderer.invoke('fs:isDir', p),
   fsSetRoot: (p) => ipcRenderer.invoke('fs:setRoot', p),
   fsListDir: (p) => ipcRenderer.invoke('fs:listDir', p),
+  fsListAll: () => ipcRenderer.invoke('fs:listAll'),
   fsCreate: (dir, name) => ipcRenderer.invoke('fs:create', dir, name),
   fsRename: (p, name) => ipcRenderer.invoke('fs:rename', p, name),
   fsCopy: (src, dir) => ipcRenderer.invoke('fs:copy', src, dir),

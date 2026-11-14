@@ -300,3 +300,29 @@ test('borrar carpeta: un solo fichero oculto va en singular, un enlace cuenta y 
     t.done();
   }
 });
+
+test('listAll devuelve los documentos de todos los niveles con su ruta relativa y respeta límite y raíz', async () => {
+  const t = setup();
+  try {
+    fs.mkdirSync(path.join(t.root, 'sub', 'hondo'), { recursive: true });
+    fs.mkdirSync(path.join(t.root, '.oculta'));
+    fs.writeFileSync(path.join(t.root, 'a.md'), '');
+    fs.writeFileSync(path.join(t.root, 'sub', 'b.md'), '');
+    fs.writeFileSync(path.join(t.root, 'sub', 'hondo', 'c.txt'), '');
+    fs.writeFileSync(path.join(t.root, 'sub', 'imagen.png'), '');
+    fs.writeFileSync(path.join(t.root, '.oculta', 'x.md'), '');
+    fs.writeFileSync(path.join(t.fuera, 'y.md'), '');
+    await assert.rejects(() => t.ops.listAll()); // sin raíz abierta
+    await t.ops.setRoot(t.root);
+    const r = await t.ops.listAll();
+    assert.deepEqual(r.files.map((x) => x.rel).sort(), ['a.md', 'sub/b.md', 'sub/hondo/c.txt']);
+    assert.equal(r.truncated, false);
+    const corto = await t.ops.listAll({ limit: 1 });
+    assert.equal(corto.files.length, 1);
+    assert.equal(corto.truncated, true);
+    const llano = await t.ops.listAll({ depth: 0 });
+    assert.deepEqual(llano.files.map((x) => x.rel), ['a.md']);
+  } finally {
+    t.done();
+  }
+});
