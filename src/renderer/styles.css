@@ -164,6 +164,7 @@ main { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
 .cm-lp-kbd { font-family: var(--font-mono); font-size: .85em; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: var(--r-s); padding: 0 5px; background: var(--bg-2); }
 .cm-lp-code { font-family: var(--font-mono); background: var(--code-bg); border-radius: var(--r-s); padding: 0 4px; font-size: 0.9em; }
 .cm-lp-link { color: var(--accent); text-decoration: underline; }
+.cm-lp-wikilink { color: var(--c-link, var(--accent)); text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
 .cm-lp-quote { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--muted); }
 .cm-lp-linkref, .cm-lp-comment { color: var(--muted); font-size: .85em; font-style: italic; }
 .cm-lp-collapsed { line-height: 0; font-size: 0; height: 0; overflow: hidden; }
@@ -310,6 +311,19 @@ body.resizing { cursor: col-resize; user-select: none; }
 #sb-filter { margin: 2px 8px 6px; padding: 5px 8px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-s); outline: 0; }
 #sb-filter:focus { border-color: var(--accent); }
 .sb-note { margin: 0 8px 6px; padding: 5px 8px; font-size: 11.5px; color: var(--muted); background: var(--bg); border: 1px dashed var(--border); border-radius: var(--r-s); }
+#sb-backlinks { flex: none; max-height: 40%; display: flex; flex-direction: column; border-top: 1px solid var(--border); min-height: 0; }
+#sb-backlinks.collapsed .bl-list { display: none; }
+.bl-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; font: inherit; font-size: 12px; font-weight: 600; color: var(--muted); background: transparent; border: 0; cursor: pointer; text-align: left; }
+.bl-head:hover { color: var(--text); }
+.bl-title { flex: 1; }
+.bl-count { font-weight: 400; }
+.bl-list { overflow: auto; padding: 0 8px 8px; }
+.bl-group { margin-bottom: 8px; }
+.bl-note, .bl-link { display: block; width: 100%; font: inherit; text-align: left; background: transparent; border: 0; border-radius: var(--r-s); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl-note { padding: 4px 8px; font-weight: 600; color: var(--text); }
+.bl-link { padding: 2px 8px 2px 16px; font-size: 12px; color: var(--muted); }
+.bl-note:hover, .bl-link:hover { background: var(--accent-soft); }
+.bl-empty { padding: 4px 8px; font-size: 12px; color: var(--muted); }
 #sb-tree { flex: 1; min-height: 0; overflow: auto; padding: 0 0 12px; outline: 0; }
 .tn-row { display: flex; align-items: center; gap: 5px; height: 26px; padding-right: 8px; cursor: pointer; white-space: nowrap; color: var(--text); border-radius: var(--r-s); margin: 0 4px; }
 .tn-row:hover { background: var(--bg-3); }

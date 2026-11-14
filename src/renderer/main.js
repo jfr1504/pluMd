@@ -28,6 +28,9 @@ import { openQuickOpen } from './quickOpen.js';
 import { initSidebarPanels } from './plugins/sidebar.js';
 import { initStatusItems } from './plugins/statusbar.js';
 import { slashMenu } from './slashMenu.js';
+import { parseWikilinks } from '../main/wikilinks.js';
+import { refrescar, olvidar, aDondeApunta } from './wikilinkIndex.js';
+import { createBacklinks } from './backlinks.js';
 import { esExcalidraw, parseExcalidraw, serializeExcalidraw, ESCENA_VACIA } from './excalidrawModelo.mjs';
 import { trasGuardar } from './guardado.mjs';
 import * as dibujo from './drawView.js';
@@ -41,6 +44,7 @@ const pluginCompartment = new Compartment(); // extensiones de CodeMirror que ap
 const pluginExtensions = () => items('extensions').map((e) => e.ext);
 let ribbon = null;
 let explorer = null;
+let backlinks = null;
 
 // ---- Documentos abiertos (una pestaña por documento) ----
 // Cada documento conserva su propio EditorState: texto, deshacer, selección y pliegues.
@@ -56,11 +60,60 @@ const AUTOSAVE_MS = 1500; // pausa tras el último cambio antes de guardar un di
 const modeExtensions = (mode) =>
   mode === 'read' ? [livePreview({ reveal: false }), tableField, blockField] : [lineNumbers()];
 
+// Enlace interno [[Nota]] bajo la posición, si lo hay.
+function wikilinkAt(state, pos) {
+  const l = state.doc.lineAt(pos);
+  return parseWikilinks(l.text).find((w) => pos >= l.from + w.from && pos <= l.from + w.to) || null;
+}
+
+// Pone el cursor al principio de un título (# Título) o de una línea del documento activo.
+function goToLine(n) {
+  const l = view.state.doc.line(Math.max(1, Math.min(n, view.state.doc.lines)));
+  view.dispatch({ selection: { anchor: l.from }, effects: EditorView.scrollIntoView(l.from, { y: 'start', yMargin: 24 }) });
+  view.focus();
+}
+function goToHeading(title) {
+  const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  const want = norm(title);
+  for (let n = 1; n <= view.state.doc.lines; n++) {
+    const m = /^#{1,6}\s+(.*?)\s*#*\s*$/.exec(view.state.doc.line(n).text);
+    if (m && norm(m[1]) === want) return goToLine(n);
+  }
+}
+
+// Abre la nota a la que apunta un [[enlace]]; si no existe ofrece crearla junto al documento (o en la carpeta abierta).
+async function openWikilink(w) {
+  const desde = cur && cur.file ? cur.file : null;
+  let dest = aDondeApunta(w.target, desde);
+  if (!dest) {
+    await refrescar(true);
+    dest = aDondeApunta(w.target, desde);
+  }
+  if (!dest) return crearNota(w);
+  await openFile(dest.path);
+  if (w.heading) goToHeading(w.heading);
+}
+async function crearNota(w) {
+  const root = explorer.getRoot();
+  if (!root) return toast('Abre una carpeta para enlazar notas entre sí: [[…]] busca en la carpeta abierta.');
+  if (/[\\/]/.test(w.target)) return toast(`No existe «${w.target}». Créala antes en el panel de carpetas.`);
+  const ok = await confirmBox({ title: 'Crear nota', message: `No existe ninguna nota llamada «${w.target}». ¿Quieres crearla?`, okLabel: 'Crear' });
+  if (!ok) return;
+  const dir = cur && cur.file && insideDir(cur.file, root) ? dirname(cur.file) : root;
+  const r = await window.api.fsCreate(dir, w.target);
+  if (!r.ok) return toast(`No se pudo crear la nota: ${r.error}`);
+  olvidar();
+  explorer.refresh();
+  await openFile(r.path);
+}
+
 // Ctrl+clic sobre un enlace lo abre en el navegador.
 const linkClicks = EditorView.domEventHandlers({
   click(e, v) {
     if (!(e.ctrlKey || e.metaKey)) return false;
     const pos = v.posAtCoords({ x: e.clientX, y: e.clientY });
+    const w = pos == null ? null : wikilinkAt(v.state, pos);
+    if (w) { openWikilink(w); return true; }
     const l = pos == null ? null : linkAt(v.state, pos);
     if (!l) return false;
     openLink(l.url);
@@ -313,6 +366,7 @@ function activate(doc) {
   updateCount(view.state);
   ribbon?.update(formatState(view.state));
   explorer?.setActive(doc.file);
+  backlinks?.update(isDraw ? null : doc.file);
   if (isDraw) showDraw(doc);
   else {
     dibujo.ocultar();
@@ -502,6 +556,7 @@ async function save(force = false, target = cur) {
   renderTabs();
   if (d === cur) updateTitle();
   emit('document:saved', { path: d.file });
+  if (d === cur) backlinks?.update(d.file);
 }
 
 async function saveAs() {
@@ -738,6 +793,14 @@ explorer = createExplorer({
   confirm: confirmBox,
   notify: toast,
   onVisibility: (v) => ribbon.setActive({ sidebar: v }),
+  onRoot: () => { olvidar(); backlinks?.update(cur && cur.kind !== 'draw' ? cur.file : null); },
+});
+backlinks = createBacklinks({
+  // Abre la nota y deja el cursor en la línea del enlace.
+  onOpen: async (p, line) => {
+    await openFile(p);
+    if (line) goToLine(line);
+  },
 });
 explorer.restore();
 

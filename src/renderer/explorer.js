@@ -17,7 +17,7 @@ const base = (p) => p.split(/[\\/]/).pop();
 const parent = (p) => p.replace(/[\\/][^\\/]*$/, '');
 const same = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
-export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, confirm, notify, onVisibility }) {
+export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, confirm, notify, onVisibility, onRoot }) {
   const $ = (id) => document.getElementById(id);
   const side = $('sidebar');
   const tree = $('sb-tree');
@@ -217,6 +217,7 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
     filter.value = '';
     await renderRoot();
     setVisible(true);
+    onRoot?.(root);
     return true;
   }
 

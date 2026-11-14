@@ -3,6 +3,7 @@ import { Decoration, ViewPlugin, EditorView, WidgetType } from '@codemirror/view
 import { resolveImageSrc, getBaseDir } from './images.js';
 import { isRenderedBlock } from './plugins/blockRenderers.js';
 import { parseAlt, enableResize, enableMove } from './imageEdit.js';
+import { parseWikilinks } from '../main/wikilinks.js';
 
 // Marcas de sintaxis Markdown que se ocultan (el resto de casos se decide en build()).
 const HIDE = new Set(['HeaderMark', 'EmphasisMark', 'StrikethroughMark', 'CodeMark', 'QuoteMark', 'CodeInfo']);
@@ -303,6 +304,31 @@ function build(view, reveal) {
             items.push([z - open - 1, z, hidden, 1]);
           }
         } else if (off) items.push([a, z, lineBreak, 1]);
+      }
+      p = l.to + 1;
+    }
+  }
+
+  // Enlaces internos [[Nota]] y [[Nota|texto]]: fuera de la línea activa solo se ve el texto, como un vínculo.
+  for (const { from, to } of view.visibleRanges) {
+    for (let p = from; p <= to; ) {
+      const l = doc.lineAt(p);
+      if (l.text.includes('[[')) {
+        for (const w of parseWikilinks(l.text)) {
+          const a = l.from + w.from;
+          const z = l.from + w.to;
+          if (inProtected(a)) continue;
+          // Con alias se ve solo lo que sigue a la barra; sin él, el nombre (y el título si lo hay).
+          const bar = w.alias ? l.text.indexOf('|', w.from) : -1;
+          const shownFrom = bar >= 0 ? l.from + bar + 1 : a + 2;
+          if (active.has(l.number) || z - 2 <= shownFrom) {
+            items.push([a, z, markDeco('cm-lp-wikilink'), 0]);
+          } else {
+            items.push([a, shownFrom, hidden, 1]);
+            items.push([shownFrom, z - 2, markDeco('cm-lp-wikilink'), 0]);
+            items.push([z - 2, z, hidden, 1]);
+          }
+        }
       }
       p = l.to + 1;
     }

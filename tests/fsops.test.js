@@ -326,3 +326,23 @@ test('listAll devuelve los documentos de todos los niveles con su ruta relativa 
     t.done();
   }
 });
+
+test('scanLinks devuelve los documentos y sus enlaces [[...]], sin leer fuera de la raíz ni los ocultos', async () => {
+  const t = setup();
+  try {
+    fs.mkdirSync(path.join(t.root, 'sub'));
+    fs.mkdirSync(path.join(t.root, '.oculta'));
+    fs.writeFileSync(path.join(t.root, 'a.md'), 'Ver [[b]] y [[sub/c#Intro|el inicio]]\n');
+    fs.writeFileSync(path.join(t.root, 'sub', 'c.md'), 'sin enlaces\n```\n[[en código]]\n```\n');
+    fs.writeFileSync(path.join(t.root, '.oculta', 'x.md'), '[[a]]');
+    fs.writeFileSync(path.join(t.fuera, 'y.md'), '[[a]]');
+    await assert.rejects(() => t.ops.scanLinks()); // sin raíz abierta
+    await t.ops.setRoot(t.root);
+    const r = await t.ops.scanLinks();
+    assert.deepEqual(r.files.map((x) => x.rel).sort(), ['a.md', 'sub/c.md']);
+    assert.equal(r.links.length, 1);
+    assert.deepEqual(r.links[0].links.map((l) => [l.target, l.heading, l.line]), [['b', '', 1], ['sub/c', 'Intro', 1]]);
+  } finally {
+    t.done();
+  }
+});
