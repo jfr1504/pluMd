@@ -31,6 +31,7 @@ import { slashMenu } from './slashMenu.js';
 import { parseWikilinks } from '../main/wikilinks.js';
 import { refrescar, olvidar, aDondeApunta } from './wikilinkIndex.js';
 import { createBacklinks } from './backlinks.js';
+import { createSplitView } from './splitView.js';
 import { esExcalidraw, parseExcalidraw, serializeExcalidraw, ESCENA_VACIA } from './excalidrawModelo.mjs';
 import { trasGuardar } from './guardado.mjs';
 import * as dibujo from './drawView.js';
@@ -45,6 +46,8 @@ const pluginExtensions = () => items('extensions').map((e) => e.ext);
 let ribbon = null;
 let explorer = null;
 let backlinks = null;
+let split = null; // vista dividida: Código a la izquierda, Lectura a la derecha
+let modoAntesDeDividir = 'read';
 
 // ---- Documentos abiertos (una pestaña por documento) ----
 // Cada documento conserva su propio EditorState: texto, deshacer, selección y pliegues.
@@ -237,6 +240,7 @@ const baseExtensions = [
       updateTitle();
       updateCount(u.state);
       scheduleChanged();
+      split?.forward(u);
     }
     if ((u.docChanged || u.selectionSet) && ribbon) ribbon.update(formatState(u.state));
   }),
@@ -263,6 +267,7 @@ docs.push(first);
 cur = first;
 
 const view = new EditorView({ parent: $('editor'), state: first.state });
+split = createSplitView({ main: view, left: $('editor'), right: $('editor2') });
 
 const docName = (d) => {
   if (d.file) return d.file.split(/[\\/]/).pop();
@@ -284,6 +289,7 @@ function updateTitle() {
 
 // Sin documentos abiertos: se oculta el editor y se ofrece crear uno nuevo o abrir un fichero.
 function showNoDocs(on) {
+  if (on) cerrarDividida();
   $('editor').hidden = on;
   if (on) $('draw').hidden = true;
   $('no-docs').hidden = !on;
@@ -359,6 +365,7 @@ function activate(doc) {
   view.setState(doc.state);
   view.dispatch({ effects: modeCompartment.reconfigure(modeExtensions(state.mode)) });
   applyPluginExtensions();
+  if (split.isOpen()) isDraw ? cerrarDividida(true) : split.update(view.state.doc);
   $('editor').classList.toggle('source', state.mode === 'source');
   if (!$('banner').dataset.sticky) $('banner').hidden = true;
   renderTabs();
@@ -582,7 +589,25 @@ async function saveAs() {
   explorer?.refresh();
 }
 
+// Vista dividida: pasa el editor a Código y muestra a la derecha el mismo texto en Lectura.
+// Al cerrarla vuelve al modo que había (salvo que se cierre al elegir otro modo, o al pasar a un dibujo).
+function cerrarDividida(volver = false) {
+  if (!split || !split.isOpen()) return;
+  split.close();
+  ribbon?.setActive({ 'split-view': false });
+  if (volver) setMode(modoAntesDeDividir);
+}
+function alternarDividida() {
+  if (split.isOpen()) return cerrarDividida(true);
+  if (!cur || cur.kind === 'draw') return toast('La vista dividida es para documentos de texto, no para dibujos.');
+  modoAntesDeDividir = state.mode;
+  setMode('source');
+  split.open(view.state.doc);
+  ribbon.setActive({ 'split-view': true });
+}
+
 function setMode(mode) {
+  cerrarDividida(); // elegir Lectura o Código sale de la vista dividida
   state.mode = mode;
   view.dispatch({ effects: modeCompartment.reconfigure(modeExtensions(mode)) });
   $('editor').classList.toggle('source', mode === 'source');
@@ -633,6 +658,7 @@ function setZoom(z) {
   if (cur && cur.kind === 'draw') return dibujo.zoom(Math.round(z));
   state.zoom = Math.max(50, Math.min(250, Math.round(z)));
   $('editor').style.setProperty('--zoom', state.zoom / 100);
+  $('editor2').style.setProperty('--zoom', state.zoom / 100);
   $('zoom').value = state.zoom;
   $('zoomval').textContent = `${state.zoom}%`;
 }
@@ -716,6 +742,7 @@ Object.assign(commands, {
     abiertos: [cur, ...docs.filter((d) => d !== cur)].filter((d) => d && d.file).map((d) => d.file),
     onOpen: openFile,
   }),
+  'split-view': () => alternarDividida(),
 });
 for (const k of listSkins()) commands[`skin-${k.id}`] = () => chooseSkin(k.id);
 for (const n of [1, 2, 3, 4, 5, 6]) commands[`style-h${n}`] = (v) => setParagraphStyle(v, `h${n}`);
@@ -1095,6 +1122,7 @@ window.addEventListener('keydown', async (e) => {
   }
   else if (k === 'p' && e.shiftKey) { e.preventDefault(); commands.palette(); }
   else if (k === 'p') { e.preventDefault(); commands['quick-open'](); }
+  else if (e.key === '\\') { e.preventDefault(); commands['split-view'](); }
   else if (k === 'e' && e.shiftKey) { e.preventDefault(); explorer.toggle(); }
   else if (cur && cur.kind === 'draw' && ['e', '=', '+', '-', '0'].includes(k)) return; // atajos del lienzo
   else if (k === 'o' && e.shiftKey) { e.preventDefault(); explorer.openFolderDialog(); }

@@ -53,7 +53,7 @@ const builtinTabs = () => [
   {
     id: 'view',
     groups: [
-      grp('Vistas', lg('mode-read', 'Lectura', 'eye', 'Documento limpio, editable (Ctrl+E)', 'mode-read'), lg('mode-source', 'Código', 'filecode', 'Markdown sin renderizar (Ctrl+E)', 'mode-source')),
+      grp('Vistas', lg('mode-read', 'Lectura', 'eye', 'Documento limpio, editable (Ctrl+E)', 'mode-read'), lg('mode-source', 'Código', 'filecode', 'Markdown sin renderizar (Ctrl+E)', 'mode-source'), lg('split-view', 'Dividida', 'split', 'Código a la izquierda y Lectura a la derecha, a la vez (Ctrl+\\)', 'split-view')),
       grp('Zoom', lg('zoom-in', 'Acercar', 'zoomin'), lg('zoom-out', 'Alejar', 'zoomout'), lg('zoom-reset', '100%', 'search', 'Zoom al 100%')),
       grp('Panel', lg('toggle-sidebar', 'Panel de carpetas', 'sidebar', 'Mostrar u ocultar el panel de carpetas (Ctrl+Mayús+E)', 'sidebar')),
       grp('Esquema', lg('fold-all', 'Contraer títulos', 'chevronup', 'Contraer todos los títulos (Ctrl+Mayús+[ en uno)'), lg('unfold-all', 'Expandir todo', 'chevron', 'Expandir todos los títulos plegados')),
