@@ -3,6 +3,7 @@ import { syntaxTree } from '@codemirror/language';
 import { Prec } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { items, executeCommand } from './plugins/registry.js';
+import { wikilinkSource } from './wikilinkCompletion.js';
 
 // Menú que se abre al escribir "/" al principio de una línea o tras un espacio, como en Obsidian.
 // Elegir una opción borra lo escrito ("/tab") y ejecuta el comando.
@@ -57,7 +58,7 @@ function source(ctx) {
 
 export const slashMenu = () => [
   autocompletion({
-    override: [source],
+    override: [source, wikilinkSource],
     icons: false,
     defaultKeymap: false,
     closeOnBlur: true,
