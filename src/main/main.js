@@ -148,6 +148,7 @@ ipcMain.handle('fs:setRoot', guard(async (dir) => {
   return { ok: true, ...(await ops.setRoot(dir)) };
 }));
 ipcMain.handle('fs:listDir', guard(async (dir) => ({ ok: true, entries: await ops.listDir(dir) })));
+ipcMain.handle('fs:listAll', guard(async () => ({ ok: true, ...(await ops.listAll()) })));
 ipcMain.handle('fs:create', guard((dir, name) => ops.create(dir, name)));
 ipcMain.handle('fs:rename', guard((p, name) => ops.rename(p, name)));
 ipcMain.handle('fs:copy', guard((src, dir) => ops.copy(src, dir)));
@@ -155,6 +156,7 @@ ipcMain.handle('fs:delete', guard((p, permanent) => ops.remove(p, { permanent: p
 ipcMain.handle('fs:mkdir', guard((dir, name) => ops.createDir(dir, name)));
 ipcMain.handle('fs:checkDir', guard((p) => ops.canRemoveDir(p)));
 ipcMain.handle('fs:deleteDir', guard((p) => ops.removeDir(p)));
+ipcMain.handle('fs:scanLinks', guard(async () => ({ ok: true, ...(await ops.scanLinks()) })));
 // Mostrar en el Explorador: documentos de la carpeta abierta o que el usuario eligió (pestañas abiertas).
 ipcMain.handle('fs:reveal', async (_e, p) => {
   if ((await ops.contains(p)) || (await access.fileAllowed(p))) shell.showItemInFolder(p);

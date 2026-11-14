@@ -13,13 +13,19 @@ const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 const { MD_RE, key: norm, within, realPath } = require('./acceso');
+const { enlacesDeDocumento } = require('./wikilinks');
 
 const SKIP_DIRS = new Set(['node_modules', '$recycle.bin', 'system volume information']);
 const INVALID = /[<>:"/\\|?*\x00-\x1f]/;
 const RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
 const FIXED_DRIVE = 3; // tipos de unidad de Windows: 3 = disco fijo, 4 = red
 const NETWORK_DRIVE = 4;
+const MAX_LINK_FILES = 3000; // documentos que scanLinks revisa como máximo
+const MAX_LINK_DEPTH = 12; // niveles de subcarpetas que recorre scanLinks
+const MAX_LINK_BYTES = 1024 * 1024; // un documento más grande no se revisa en busca de enlaces
 const MAX_SCAN = 20000; // entradas que se revisan como máximo antes de borrar una carpeta
+const MAX_LIST = 5000; // documentos que devuelve listAll como máximo
+const MAX_DEPTH = 12; // niveles de subcarpetas que recorre listAll
 
 // El panel no muestra los nombres que empiezan por punto ni estas carpetas.
 const isHidden = (name) => name.startsWith('.') || SKIP_DIRS.has(name.toLowerCase());
@@ -190,6 +196,23 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
       return out;
     },
 
+    // Todos los documentos de la carpeta abierta, en cualquier nivel (para el selector rápido).
+    // Reutiliza listDir, así que respeta ocultos y enlaces que salen de la raíz. Acotado en número y profundidad.
+    async listAll({ limit = MAX_LIST, depth = MAX_DEPTH } = {}) {
+      if (!root) throw new Error(msg.outside);
+      const files = [];
+      let truncated = false;
+      const walk = async (dir, level) => {
+        for (const e of await this.listDir(dir)) {
+          if (files.length >= limit) { truncated = true; return; }
+          if (!e.dir) files.push({ name: e.name, path: e.path, rel: path.relative(root.path, e.path).replace(/\\/g, '/') });
+          else if (level < depth) await walk(e.path, level + 1);
+        }
+      };
+      await walk(root.path, 0);
+      return { files, truncated };
+    },
+
     // Crea un documento vacío. Nunca sobrescribe.
     async create(dir, rawName) {
       if (!(await contains(dir))) return { ok: false, error: msg.outside };
@@ -282,6 +305,34 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
     // para avisar antes de pedir la confirmación; removeDir vuelve a comprobarlo.
     async canRemoveDir(p) {
       return (await dirBlocker(p)) || { ok: true };
+    },
+
+    // Documentos de la carpeta abierta (todos los niveles) y los enlaces [[...]] que contiene cada uno.
+    // Solo lee dentro de la raíz (usa listDir) y con límites: número de documentos, profundidad y tamaño.
+    async scanLinks() {
+      if (!root) throw new Error(msg.outside);
+      const files = [];
+      let truncated = false;
+      const walk = async (dir, level) => {
+        for (const e of await this.listDir(dir)) {
+          if (files.length >= MAX_LINK_FILES) { truncated = true; return; }
+          if (!e.dir) files.push({ name: e.name, path: e.path, rel: path.relative(root.path, e.path).replace(/\\/g, '/') });
+          else if (level < MAX_LINK_DEPTH) await walk(e.path, level + 1);
+        }
+      };
+      await walk(root.path, 0);
+      const links = [];
+      for (const f of files) {
+        try {
+          const st = await fs.promises.stat(f.path);
+          if (st.size > MAX_LINK_BYTES) continue;
+          const found = enlacesDeDocumento(await fs.promises.readFile(f.path, 'utf8'));
+          if (found.length) links.push({ path: f.path, links: found.map(({ target, heading, line, text }) => ({ target, heading, line, text })) });
+        } catch {
+          /* un fichero ilegible no impide revisar el resto */
+        }
+      }
+      return { files, links, truncated };
     },
 
     // Envía una carpeta a la Papelera, para poder recuperarla, si dirBlocker no lo impide.

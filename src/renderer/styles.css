@@ -123,8 +123,12 @@ body.ribbon-collapsed #btn-collapse svg { transform: rotate(180deg); }
 
 /* ---- Documento ---- */
 main { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
-#editor { padding: 20px 40px 120px; --zoom: 1; }
-#editor[hidden], #no-docs[hidden], #draw[hidden] { display: none; }
+#editor, #editor2 { padding: 20px 40px 120px; --zoom: 1; }
+#editor[hidden], #editor2[hidden], #no-docs[hidden], #draw[hidden] { display: none; }
+/* Vista dividida: cada panel se desplaza por su cuenta. */
+main.split { display: flex; overflow: hidden; }
+main.split #editor, main.split #editor2 { flex: 1 1 0; min-width: 0; height: 100%; overflow: auto; }
+main.split #editor2 { border-left: 1px solid var(--border); }
 #draw { height: 100%; }
 #no-docs { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; height: 100%; min-height: 240px; color: var(--muted); }
 #no-docs p { margin: 0; font-size: 1.05em; }
@@ -132,7 +136,7 @@ main { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
 #editor.source { padding: 0; }
 .cm-editor { outline: none; font-size: calc(16px * var(--zoom)); line-height: 1.65; }
 .cm-editor.cm-focused { outline: none; }
-#editor .cm-scroller { font-family: var(--font-text); }
+#editor .cm-scroller, #editor2 .cm-scroller { font-family: var(--font-text); }
 #editor.source .cm-scroller { font-family: var(--font-mono); font-size: calc(14px * var(--zoom)); }
 #editor .cm-activeLine { background: transparent; }
 #editor .cm-cursor { border-left-color: var(--text); }
@@ -164,6 +168,7 @@ main { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
 .cm-lp-kbd { font-family: var(--font-mono); font-size: .85em; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: var(--r-s); padding: 0 5px; background: var(--bg-2); }
 .cm-lp-code { font-family: var(--font-mono); background: var(--code-bg); border-radius: var(--r-s); padding: 0 4px; font-size: 0.9em; }
 .cm-lp-link { color: var(--accent); text-decoration: underline; }
+.cm-lp-wikilink { color: var(--c-link, var(--accent)); text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
 .cm-lp-quote { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--muted); }
 .cm-lp-linkref, .cm-lp-comment { color: var(--muted); font-size: .85em; font-style: italic; }
 .cm-lp-collapsed { line-height: 0; font-size: 0; height: 0; overflow: hidden; }
@@ -234,7 +239,7 @@ body.img-dragging, body.img-dragging * { cursor: grabbing !important; user-selec
 .dlg-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 
 /* ---- Plegado de títulos (flecha a la izquierda, como en Obsidian) ---- */
-#editor:not(.source) .cm-gutters { background: transparent; border: 0; }
+#editor:not(.source) .cm-gutters, #editor2 .cm-gutters { background: transparent; border: 0; }
 .cm-foldGutter { width: 22px; }
 .cm-foldGutter .cm-gutterElement { display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .cm-fold-arrow { color: var(--muted); font-size: 14px; line-height: 1; opacity: 0; transition: opacity .12s; user-select: none; }
@@ -245,7 +250,7 @@ body.img-dragging, body.img-dragging * { cursor: grabbing !important; user-selec
 
 /* ---- Colores personalizables (valores por defecto: la paleta del tema) ---- */
 main { background: var(--c-bg, var(--bg)); }
-#editor:not(.source) .cm-content { color: var(--c-text, var(--text)); }
+#editor:not(.source) .cm-content, #editor2 .cm-content { color: var(--c-text, var(--text)); }
 .cm-lp-h1 { color: var(--c-h1, inherit); } .cm-lp-h2 { color: var(--c-h2, inherit); } .cm-lp-h3 { color: var(--c-h3, inherit); }
 .cm-lp-h4 { color: var(--c-h4, inherit); } .cm-lp-h5 { color: var(--c-h5, inherit); } .cm-lp-h6 { color: var(--c-h6, var(--muted)); }
 .cm-lp-strong { color: var(--c-bold, inherit); } .cm-lp-em { color: var(--c-italic, inherit); }
@@ -310,6 +315,19 @@ body.resizing { cursor: col-resize; user-select: none; }
 #sb-filter { margin: 2px 8px 6px; padding: 5px 8px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-s); outline: 0; }
 #sb-filter:focus { border-color: var(--accent); }
 .sb-note { margin: 0 8px 6px; padding: 5px 8px; font-size: 11.5px; color: var(--muted); background: var(--bg); border: 1px dashed var(--border); border-radius: var(--r-s); }
+#sb-backlinks { flex: none; max-height: 40%; display: flex; flex-direction: column; border-top: 1px solid var(--border); min-height: 0; }
+#sb-backlinks.collapsed .bl-list { display: none; }
+.bl-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; font: inherit; font-size: 12px; font-weight: 600; color: var(--muted); background: transparent; border: 0; cursor: pointer; text-align: left; }
+.bl-head:hover { color: var(--text); }
+.bl-title { flex: 1; }
+.bl-count { font-weight: 400; }
+.bl-list { overflow: auto; padding: 0 8px 8px; }
+.bl-group { margin-bottom: 8px; }
+.bl-note, .bl-link { display: block; width: 100%; font: inherit; text-align: left; background: transparent; border: 0; border-radius: var(--r-s); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl-note { padding: 4px 8px; font-weight: 600; color: var(--text); }
+.bl-link { padding: 2px 8px 2px 16px; font-size: 12px; color: var(--muted); }
+.bl-note:hover, .bl-link:hover { background: var(--accent-soft); }
+.bl-empty { padding: 4px 8px; font-size: 12px; color: var(--muted); }
 #sb-tree { flex: 1; min-height: 0; overflow: auto; padding: 0 0 12px; outline: 0; }
 .tn-row { display: flex; align-items: center; gap: 5px; height: 26px; padding-right: 8px; cursor: pointer; white-space: nowrap; color: var(--text); border-radius: var(--r-s); margin: 0 4px; }
 .tn-row:hover { background: var(--bg-3); }
@@ -403,6 +421,8 @@ button.status-item:hover { background: var(--bg-3); color: var(--text); }
 .pal-tag { font-size: 11px; color: var(--accent); border: 1px solid var(--accent); border-radius: 10px; padding: 0 7px; }
 .pal-row kbd { font: inherit; font-size: 11px; color: var(--muted); }
 .pal-empty { padding: 10px; color: var(--muted); }
+.pal-dir { font-size: 12px; color: var(--muted); max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pal-note { margin-top: 8px; padding: 0 8px; font-size: 12px; color: var(--muted); }
 
 /* Menú "/" del editor (como en Obsidian) */
 .cm-tooltip.slash-menu { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-m); box-shadow: var(--shadow-pop); overflow: hidden; font-family: var(--font-ui); }

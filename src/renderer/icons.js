@@ -23,6 +23,7 @@ export const ICONS = {
   search: P('M11 4a7 7 0 100 14 7 7 0 000-14z M21 21l-4.5-4.5'),
   replace: P('M4 7h13l-3-3 M20 17H7l3 3'),
   selectall: P('M4 4h16v16H4z M8 8h8v8H8z'),
+  split: P('M3 5h18v14H3z M12 5v14'),
   table: P('M3 5h18v14H3z M3 10h18 M3 15h18 M9 5v14 M15 5v14'),
   image: P('M3 5h18v14H3z M8.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3z M21 16l-5-5-8 8'),
   link: P('M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1 M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1'),
