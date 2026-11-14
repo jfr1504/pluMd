@@ -1,6 +1,7 @@
 import { icon, hydrateIcons } from './icons.js';
 import { LANGS } from './highlight.js';
 import { listSkins } from './skins.js';
+import { listEsteticas } from './esteticas.js';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
@@ -53,7 +54,7 @@ const builtinTabs = () => [
   {
     id: 'view',
     groups: [
-      grp('Vistas', lg('mode-read', 'Lectura', 'eye', 'Documento limpio, editable (Ctrl+E)', 'mode-read'), lg('mode-source', 'Código', 'filecode', 'Markdown sin renderizar (Ctrl+E)', 'mode-source')),
+      grp('Vistas', lg('mode-read', 'Lectura', 'eye', 'Documento limpio, editable (Ctrl+E)', 'mode-read'), lg('mode-source', 'Código', 'filecode', 'Markdown sin renderizar (Ctrl+E)', 'mode-source'), lg('split-view', 'Dividida', 'split', 'Código a la izquierda y Lectura a la derecha, a la vez (Ctrl+\\)', 'split-view')),
       grp('Zoom', lg('zoom-in', 'Acercar', 'zoomin'), lg('zoom-out', 'Alejar', 'zoomout'), lg('zoom-reset', '100%', 'search', 'Zoom al 100%')),
       grp('Panel', lg('toggle-sidebar', 'Panel de carpetas', 'sidebar', 'Mostrar u ocultar el panel de carpetas (Ctrl+Mayús+E)', 'sidebar')),
       grp('Esquema', lg('fold-all', 'Contraer títulos', 'chevronup', 'Contraer todos los títulos (Ctrl+Mayús+[ en uno)'), lg('unfold-all', 'Expandir todo', 'chevron', 'Expandir todos los títulos plegados')),
@@ -61,6 +62,8 @@ const builtinTabs = () => [
       grp('Aspecto', ...listSkins().map((k) => lg(`skin-${k.id}`, k.name, k.icon, k.description, `skin-${k.id}`))),
       grp('Modo', lg('theme-light', 'Claro', 'sun', 'Tema claro', 'theme-light'), lg('theme-dark', 'Oscuro', 'moon', 'Tema oscuro', 'theme-dark')),
       grp('Colores', lg('colors', 'Personalizar colores', 'palette', 'Elegir los colores de títulos, negrita, texto y más')),
+      // Las estéticas salen de su registro (esteticasModelo.mjs), como los skins.
+      grp('Estética', ...listEsteticas().map((e) => lg(`estetica-${e.id}`, e.name, e.icon, e.description, `estetica-${e.id}`))),
       grp('Pantalla', lg('fullscreen', 'Pantalla completa', 'fullscreen', 'Oculta la cinta y los paneles para ver todo el documento (F11)', 'fullscreen')),
     ],
   },
@@ -80,7 +83,7 @@ const builtinTabs = () => [
   {
     id: 'help',
     groups: [
-      grp('Información', lg('about', 'Acerca de', 'info', 'Versión, autor y licencia'), lg('repo', 'Proyecto en GitHub', 'link', 'Abrir el repositorio en GitHub'), lg('palette', 'Paleta de comandos', 'search', 'Buscar y ejecutar cualquier comando (Ctrl+Mayús+P)')),
+      grp('Información', lg('about', 'Acerca de', 'info', 'Versión, autor y licencia'), lg('repo', 'Proyecto en GitHub', 'link', 'Abrir el repositorio en GitHub'), lg('palette', 'Paleta de comandos', 'search', 'Buscar y ejecutar cualquier comando (Ctrl+Mayús+P)'), lg('quick-open', 'Abrir por nombre', 'open', 'Buscar un documento por su nombre (Ctrl+P)')),
       grp('Plugins', lg('plugins', 'Administrar plugins', 'puzzle', 'Ver, activar y desactivar plugins'), lg('plugins-folder', 'Carpeta de plugins', 'folder', 'Abrir la carpeta donde se instalan los plugins'), lg('plugins-reload', 'Recargar plugins', 'refresh', 'Volver a leer y cargar los plugins')),
     ],
   },
@@ -189,7 +192,7 @@ export function createRibbon({ run }) {
   fileMenu.className = 'popup menu';
   fileMenu.hidden = true;
   fileMenu.innerHTML = [
-    ['new', 'Nuevo   Ctrl+N', 'filecode'], ['new-draw', 'Nuevo dibujo', 'pencil'], ['open', 'Abrir…   Ctrl+O', 'open'], ['open-folder', 'Abrir carpeta…   Ctrl+Mayús+O', 'folder'], ['save', 'Guardar   Ctrl+S', 'save'], ['saveas', 'Guardar como…', 'saveas'], ['close', 'Cerrar documento   Ctrl+W', 'open'], ['plugins', 'Plugins…', 'puzzle'], ['palette', 'Paleta de comandos   Ctrl+Mayús+P', 'search'], ['about', 'Acerca de…', 'info'],
+    ['new', 'Nuevo   Ctrl+N', 'filecode'], ['new-draw', 'Nuevo dibujo', 'pencil'], ['open', 'Abrir…   Ctrl+O', 'open'], ['open-folder', 'Abrir carpeta…   Ctrl+Mayús+O', 'folder'], ['save', 'Guardar   Ctrl+S', 'save'], ['saveas', 'Guardar como…', 'saveas'], ['close', 'Cerrar documento   Ctrl+W', 'open'], ['plugins', 'Plugins…', 'puzzle'], ['quick-open', 'Abrir por nombre…   Ctrl+P', 'open'], ['palette', 'Paleta de comandos   Ctrl+Mayús+P', 'search'], ['about', 'Acerca de…', 'info'],
   ].map(([c, l, i]) => `<button type="button" data-cmd="${c}">${icon(i, 16)}<span>${l}</span></button>`).join('');
   document.body.append(fileMenu);
 

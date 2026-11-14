@@ -11,6 +11,7 @@ import { codeLanguages, codeHighlight } from './highlight.js';
 import { headingFolding, foldKeymap, foldAllHeadings, expandAll } from './folding.js';
 import { setScope } from './colors.js';
 import { applySkin, listSkins, getSkin, hasSkin } from './skins.js';
+import { applyEstetica, listEsteticas } from './esteticas.js';
 import { setBaseDir, dirname } from './images.js';
 import {
   toggleWrap, setParagraphStyle, toggleList, toggleTaskList, changeIndent, insertRule, insertCodeBlock, exitCodeBlock,
@@ -24,9 +25,14 @@ import { on, emit, items, removeItem, reportError, registerCommand, getCommand, 
 import { blockField, refreshBlocks } from './plugins/blockRenderers.js';
 import { initPlugins, startPlugins, reloadPlugins, failedCount } from './plugins/loader.js';
 import { openPluginsDialog, openPalette } from './plugins/ui.js';
+import { openQuickOpen } from './quickOpen.js';
 import { initSidebarPanels } from './plugins/sidebar.js';
 import { initStatusItems } from './plugins/statusbar.js';
 import { slashMenu } from './slashMenu.js';
+import { parseWikilinks } from '../main/wikilinks.js';
+import { refrescar, olvidar, aDondeApunta } from './wikilinkIndex.js';
+import { createBacklinks } from './backlinks.js';
+import { createSplitView } from './splitView.js';
 import { esExcalidraw, parseExcalidraw, serializeExcalidraw, ESCENA_VACIA } from './excalidrawModelo.mjs';
 import { trasGuardar } from './guardado.mjs';
 import * as dibujo from './drawView.js';
@@ -40,6 +46,9 @@ const pluginCompartment = new Compartment(); // extensiones de CodeMirror que ap
 const pluginExtensions = () => items('extensions').map((e) => e.ext);
 let ribbon = null;
 let explorer = null;
+let backlinks = null;
+let split = null; // vista dividida: Código a la izquierda, Lectura a la derecha
+let modoAntesDeDividir = 'read';
 
 // ---- Documentos abiertos (una pestaña por documento) ----
 // Cada documento conserva su propio EditorState: texto, deshacer, selección y pliegues.
@@ -55,11 +64,60 @@ const AUTOSAVE_MS = 1500; // pausa tras el último cambio antes de guardar un di
 const modeExtensions = (mode) =>
   mode === 'read' ? [livePreview({ reveal: false }), tableField, blockField] : [lineNumbers()];
 
+// Enlace interno [[Nota]] bajo la posición, si lo hay.
+function wikilinkAt(state, pos) {
+  const l = state.doc.lineAt(pos);
+  return parseWikilinks(l.text).find((w) => pos >= l.from + w.from && pos <= l.from + w.to) || null;
+}
+
+// Pone el cursor al principio de un título (# Título) o de una línea del documento activo.
+function goToLine(n) {
+  const l = view.state.doc.line(Math.max(1, Math.min(n, view.state.doc.lines)));
+  view.dispatch({ selection: { anchor: l.from }, effects: EditorView.scrollIntoView(l.from, { y: 'start', yMargin: 24 }) });
+  view.focus();
+}
+function goToHeading(title) {
+  const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  const want = norm(title);
+  for (let n = 1; n <= view.state.doc.lines; n++) {
+    const m = /^#{1,6}\s+(.*?)\s*#*\s*$/.exec(view.state.doc.line(n).text);
+    if (m && norm(m[1]) === want) return goToLine(n);
+  }
+}
+
+// Abre la nota a la que apunta un [[enlace]]; si no existe ofrece crearla junto al documento (o en la carpeta abierta).
+async function openWikilink(w) {
+  const desde = cur && cur.file ? cur.file : null;
+  let dest = aDondeApunta(w.target, desde);
+  if (!dest) {
+    await refrescar(true);
+    dest = aDondeApunta(w.target, desde);
+  }
+  if (!dest) return crearNota(w);
+  await openFile(dest.path);
+  if (w.heading) goToHeading(w.heading);
+}
+async function crearNota(w) {
+  const root = explorer.getRoot();
+  if (!root) return toast('Abre una carpeta para enlazar notas entre sí: [[…]] busca en la carpeta abierta.');
+  if (/[\\/]/.test(w.target)) return toast(`No existe «${w.target}». Créala antes en el panel de carpetas.`);
+  const ok = await confirmBox({ title: 'Crear nota', message: `No existe ninguna nota llamada «${w.target}». ¿Quieres crearla?`, okLabel: 'Crear' });
+  if (!ok) return;
+  const dir = cur && cur.file && insideDir(cur.file, root) ? dirname(cur.file) : root;
+  const r = await window.api.fsCreate(dir, w.target);
+  if (!r.ok) return toast(`No se pudo crear la nota: ${r.error}`);
+  olvidar();
+  explorer.refresh();
+  await openFile(r.path);
+}
+
 // Ctrl+clic sobre un enlace lo abre en el navegador.
 const linkClicks = EditorView.domEventHandlers({
   click(e, v) {
     if (!(e.ctrlKey || e.metaKey)) return false;
     const pos = v.posAtCoords({ x: e.clientX, y: e.clientY });
+    const w = pos == null ? null : wikilinkAt(v.state, pos);
+    if (w) { openWikilink(w); return true; }
     const l = pos == null ? null : linkAt(v.state, pos);
     if (!l) return false;
     openLink(l.url);
@@ -183,6 +241,7 @@ const baseExtensions = [
       updateTitle();
       updateCount(u.state);
       scheduleChanged();
+      split?.forward(u);
     }
     if ((u.docChanged || u.selectionSet) && ribbon) ribbon.update(formatState(u.state));
   }),
@@ -209,6 +268,7 @@ docs.push(first);
 cur = first;
 
 const view = new EditorView({ parent: $('editor'), state: first.state });
+split = createSplitView({ main: view, left: $('editor'), right: $('editor2') });
 
 const docName = (d) => {
   if (d.file) return d.file.split(/[\\/]/).pop();
@@ -230,6 +290,7 @@ function updateTitle() {
 
 // Sin documentos abiertos: se oculta el editor y se ofrece crear uno nuevo o abrir un fichero.
 function showNoDocs(on) {
+  if (on) cerrarDividida();
   $('editor').hidden = on;
   if (on) $('draw').hidden = true;
   $('no-docs').hidden = !on;
@@ -286,6 +347,13 @@ function renderTabs() {
   bar.querySelector('.dtab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
+// Fundido al cambiar de documento: la estética Folio lo anima con CSS (clase .folio-swap); con Clásica no hace nada.
+function swapFade(el) {
+  el.classList.remove('folio-swap');
+  void el.offsetWidth; // reinicia la animación
+  el.classList.add('folio-swap');
+}
+
 function activate(doc) {
   if (cur && cur !== doc && cur.kind !== 'draw') {
     cur.state = view.state;
@@ -303,8 +371,10 @@ function activate(doc) {
   // La carpeta base se fija antes de montar el estado para que las imágenes relativas se resuelvan bien.
   setBaseDir(doc.file ? dirname(doc.file) : null);
   view.setState(doc.state);
+  swapFade($('editor'));
   view.dispatch({ effects: modeCompartment.reconfigure(modeExtensions(state.mode)) });
   applyPluginExtensions();
+  if (split.isOpen()) isDraw ? cerrarDividida(true) : split.update(view.state.doc);
   $('editor').classList.toggle('source', state.mode === 'source');
   if (!$('banner').dataset.sticky) $('banner').hidden = true;
   renderTabs();
@@ -312,6 +382,7 @@ function activate(doc) {
   updateCount(view.state);
   ribbon?.update(formatState(view.state));
   explorer?.setActive(doc.file);
+  backlinks?.update(isDraw ? null : doc.file);
   if (isDraw) showDraw(doc);
   else {
     dibujo.ocultar();
@@ -501,6 +572,7 @@ async function save(force = false, target = cur) {
   renderTabs();
   if (d === cur) updateTitle();
   emit('document:saved', { path: d.file });
+  if (d === cur) backlinks?.update(d.file);
 }
 
 async function saveAs() {
@@ -526,10 +598,39 @@ async function saveAs() {
   explorer?.refresh();
 }
 
+// Vista dividida: pasa el editor a Código y muestra a la derecha el mismo texto en Lectura.
+// Al cerrarla vuelve al modo que había (salvo que se cierre al elegir otro modo, o al pasar a un dibujo).
+function cerrarDividida(volver = false) {
+  if (!split || !split.isOpen()) return;
+  split.close();
+  ribbon?.setActive({ 'split-view': false });
+  if (volver) setMode(modoAntesDeDividir);
+}
+function alternarDividida() {
+  if (split.isOpen()) return cerrarDividida(true);
+  if (!cur || cur.kind === 'draw') return toast('La vista dividida es para documentos de texto, no para dibujos.');
+  modoAntesDeDividir = state.mode;
+  setMode('source');
+  split.open(view.state.doc);
+  ribbon.setActive({ 'split-view': true });
+}
+
+// Estética Folio: los cambios visuales de toda la ventana (modo, tema, aspecto) se hacen con un fundido.
+// Sin Folio, con «reducir movimiento» o sin View Transitions se ejecuta directamente.
+async function conTransicion(fn) {
+  const root = document.documentElement;
+  const sinMovimiento = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (root.dataset.estetica !== 'folio' || sinMovimiento || typeof document.startViewTransition !== 'function') return fn();
+  try { await document.startViewTransition(fn).updateCallbackDone; } catch { /* transición cancelada: el cambio ya se aplicó */ }
+}
+
 function setMode(mode) {
+  cerrarDividida(); // elegir Lectura o Código sale de la vista dividida
   state.mode = mode;
-  view.dispatch({ effects: modeCompartment.reconfigure(modeExtensions(mode)) });
-  $('editor').classList.toggle('source', mode === 'source');
+  conTransicion(() => {
+    view.dispatch({ effects: modeCompartment.reconfigure(modeExtensions(mode)) });
+    $('editor').classList.toggle('source', mode === 'source');
+  });
   ribbon.setActive({ 'mode-read': mode === 'read', 'mode-source': mode === 'source' });
   view.focus();
   emit('mode:changed', { mode });
@@ -544,20 +645,32 @@ function refreshAppearance() {
   dibujo.repintar();
   const active = { 'theme-light': theme === 'light', 'theme-dark': theme === 'dark' };
   for (const k of listSkins()) active[`skin-${k.id}`] = k.id === skin;
+  for (const e of listEsteticas()) active[`estetica-${e.id}`] = e.id === (root.dataset.estetica || 'clasica');
   ribbon.setActive(active);
   // Los bloques que dibujan los plugins se repintan con el aspecto nuevo.
   view.dispatch({ effects: refreshBlocks.of(null) });
   emit('theme:changed', { skin, theme });
 }
 function chooseTheme(t) {
-  document.documentElement.dataset.theme = t;
-  try { localStorage.setItem('theme', t); } catch {}
-  refreshAppearance();
+  conTransicion(() => {
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem('theme', t); } catch {}
+    refreshAppearance();
+  });
+}
+async function chooseEstetica(id) {
+  await conTransicion(async () => {
+    const applied = await applyEstetica(id);
+    try { localStorage.setItem('estetica', applied); } catch {}
+    refreshAppearance();
+  });
 }
 async function chooseSkin(id) {
-  const applied = await applySkin(id);
-  try { localStorage.setItem('skin', applied); } catch {}
-  refreshAppearance();
+  await conTransicion(async () => {
+    const applied = await applySkin(id);
+    try { localStorage.setItem('skin', applied); } catch {}
+    refreshAppearance();
+  });
 }
 const appearanceLabel = () => {
   const root = document.documentElement;
@@ -577,6 +690,7 @@ function setZoom(z) {
   if (cur && cur.kind === 'draw') return dibujo.zoom(Math.round(z));
   state.zoom = Math.max(50, Math.min(250, Math.round(z)));
   $('editor').style.setProperty('--zoom', state.zoom / 100);
+  $('editor2').style.setProperty('--zoom', state.zoom / 100);
   $('zoom').value = state.zoom;
   $('zoomval').textContent = `${state.zoom}%`;
 }
@@ -656,8 +770,14 @@ Object.assign(commands, {
     toast('Plugins recargados.');
   },
   palette: () => openPalette(ribbon.entries()),
+  'quick-open': () => openQuickOpen({
+    abiertos: [cur, ...docs.filter((d) => d !== cur)].filter((d) => d && d.file).map((d) => d.file),
+    onOpen: openFile,
+  }),
+  'split-view': () => alternarDividida(),
 });
 for (const k of listSkins()) commands[`skin-${k.id}`] = () => chooseSkin(k.id);
+for (const e of listEsteticas()) commands[`estetica-${e.id}`] = () => chooseEstetica(e.id);
 for (const n of [1, 2, 3, 4, 5, 6]) commands[`style-h${n}`] = (v) => setParagraphStyle(v, `h${n}`);
 commands['style-normal'] = (v) => setParagraphStyle(v, 'normal');
 commands['style-quote'] = (v) => setParagraphStyle(v, 'quote');
@@ -733,6 +853,14 @@ explorer = createExplorer({
   confirm: confirmBox,
   notify: toast,
   onVisibility: (v) => ribbon.setActive({ sidebar: v }),
+  onRoot: () => { olvidar(); backlinks?.update(cur && cur.kind !== 'draw' ? cur.file : null); },
+});
+backlinks = createBacklinks({
+  // Abre la nota y deja el cursor en la línea del enlace.
+  onOpen: async (p, line) => {
+    await openFile(p);
+    if (line) goToLine(line);
+  },
 });
 explorer.restore();
 
@@ -1026,6 +1154,8 @@ window.addEventListener('keydown', async (e) => {
     activate(docs[(i + (e.shiftKey ? docs.length - 1 : 1)) % docs.length]);
   }
   else if (k === 'p' && e.shiftKey) { e.preventDefault(); commands.palette(); }
+  else if (k === 'p') { e.preventDefault(); commands['quick-open'](); }
+  else if (e.key === '\\') { e.preventDefault(); commands['split-view'](); }
   else if (k === 'e' && e.shiftKey) { e.preventDefault(); explorer.toggle(); }
   else if (cur && cur.kind === 'draw' && ['e', '=', '+', '-', '0'].includes(k)) return; // atajos del lienzo
   else if (k === 'o' && e.shiftKey) { e.preventDefault(); explorer.openFolderDialog(); }
