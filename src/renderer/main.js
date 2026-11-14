@@ -11,6 +11,7 @@ import { codeLanguages, codeHighlight } from './highlight.js';
 import { headingFolding, foldKeymap, foldAllHeadings, expandAll } from './folding.js';
 import { setScope } from './colors.js';
 import { applySkin, listSkins, getSkin, hasSkin } from './skins.js';
+import { applyEstetica, listEsteticas } from './esteticas.js';
 import { setBaseDir, dirname } from './images.js';
 import {
   toggleWrap, setParagraphStyle, toggleList, toggleTaskList, changeIndent, insertRule, insertCodeBlock, exitCodeBlock,
@@ -346,6 +347,13 @@ function renderTabs() {
   bar.querySelector('.dtab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
+// Fundido al cambiar de documento: la estética Folio lo anima con CSS (clase .folio-swap); con Clásica no hace nada.
+function swapFade(el) {
+  el.classList.remove('folio-swap');
+  void el.offsetWidth; // reinicia la animación
+  el.classList.add('folio-swap');
+}
+
 function activate(doc) {
   if (cur && cur !== doc && cur.kind !== 'draw') {
     cur.state = view.state;
@@ -363,6 +371,7 @@ function activate(doc) {
   // La carpeta base se fija antes de montar el estado para que las imágenes relativas se resuelvan bien.
   setBaseDir(doc.file ? dirname(doc.file) : null);
   view.setState(doc.state);
+  swapFade($('editor'));
   view.dispatch({ effects: modeCompartment.reconfigure(modeExtensions(state.mode)) });
   applyPluginExtensions();
   if (split.isOpen()) isDraw ? cerrarDividida(true) : split.update(view.state.doc);
@@ -606,11 +615,22 @@ function alternarDividida() {
   ribbon.setActive({ 'split-view': true });
 }
 
+// Estética Folio: los cambios visuales de toda la ventana (modo, tema, aspecto) se hacen con un fundido.
+// Sin Folio, con «reducir movimiento» o sin View Transitions se ejecuta directamente.
+async function conTransicion(fn) {
+  const root = document.documentElement;
+  const sinMovimiento = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (root.dataset.estetica !== 'folio' || sinMovimiento || typeof document.startViewTransition !== 'function') return fn();
+  try { await document.startViewTransition(fn).updateCallbackDone; } catch { /* transición cancelada: el cambio ya se aplicó */ }
+}
+
 function setMode(mode) {
   cerrarDividida(); // elegir Lectura o Código sale de la vista dividida
   state.mode = mode;
-  view.dispatch({ effects: modeCompartment.reconfigure(modeExtensions(mode)) });
-  $('editor').classList.toggle('source', mode === 'source');
+  conTransicion(() => {
+    view.dispatch({ effects: modeCompartment.reconfigure(modeExtensions(mode)) });
+    $('editor').classList.toggle('source', mode === 'source');
+  });
   ribbon.setActive({ 'mode-read': mode === 'read', 'mode-source': mode === 'source' });
   view.focus();
   emit('mode:changed', { mode });
@@ -625,20 +645,32 @@ function refreshAppearance() {
   dibujo.repintar();
   const active = { 'theme-light': theme === 'light', 'theme-dark': theme === 'dark' };
   for (const k of listSkins()) active[`skin-${k.id}`] = k.id === skin;
+  for (const e of listEsteticas()) active[`estetica-${e.id}`] = e.id === (root.dataset.estetica || 'clasica');
   ribbon.setActive(active);
   // Los bloques que dibujan los plugins se repintan con el aspecto nuevo.
   view.dispatch({ effects: refreshBlocks.of(null) });
   emit('theme:changed', { skin, theme });
 }
 function chooseTheme(t) {
-  document.documentElement.dataset.theme = t;
-  try { localStorage.setItem('theme', t); } catch {}
-  refreshAppearance();
+  conTransicion(() => {
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem('theme', t); } catch {}
+    refreshAppearance();
+  });
+}
+async function chooseEstetica(id) {
+  await conTransicion(async () => {
+    const applied = await applyEstetica(id);
+    try { localStorage.setItem('estetica', applied); } catch {}
+    refreshAppearance();
+  });
 }
 async function chooseSkin(id) {
-  const applied = await applySkin(id);
-  try { localStorage.setItem('skin', applied); } catch {}
-  refreshAppearance();
+  await conTransicion(async () => {
+    const applied = await applySkin(id);
+    try { localStorage.setItem('skin', applied); } catch {}
+    refreshAppearance();
+  });
 }
 const appearanceLabel = () => {
   const root = document.documentElement;
@@ -745,6 +777,7 @@ Object.assign(commands, {
   'split-view': () => alternarDividida(),
 });
 for (const k of listSkins()) commands[`skin-${k.id}`] = () => chooseSkin(k.id);
+for (const e of listEsteticas()) commands[`estetica-${e.id}`] = () => chooseEstetica(e.id);
 for (const n of [1, 2, 3, 4, 5, 6]) commands[`style-h${n}`] = (v) => setParagraphStyle(v, `h${n}`);
 commands['style-normal'] = (v) => setParagraphStyle(v, 'normal');
 commands['style-quote'] = (v) => setParagraphStyle(v, 'quote');

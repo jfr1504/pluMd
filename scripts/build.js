@@ -16,7 +16,16 @@ fs.mkdirSync(path.join(out, 'skins'), { recursive: true });
 for (const f of fs.readdirSync(path.join(__dirname, '..', 'src', 'renderer', 'skins'))) {
   fs.copyFileSync(path.join(__dirname, '..', 'src', 'renderer', 'skins', f), path.join(out, 'skins', f));
 }
+// Estéticas (CSS): capa sobre el skin y el modo; Folio usa la tipografía Newsreader (SIL OFL; ver node_modules/@fontsource-variable/newsreader/LICENSE).
+fs.mkdirSync(path.join(out, 'esteticas'), { recursive: true });
+for (const f of fs.readdirSync(path.join(__dirname, '..', 'src', 'renderer', 'esteticas'))) {
+  fs.copyFileSync(path.join(__dirname, '..', 'src', 'renderer', 'esteticas', f), path.join(out, 'esteticas', f));
+}
 fs.mkdirSync(path.join(out, 'fonts'), { recursive: true });
+fs.copyFileSync(
+  path.join(__dirname, '..', 'node_modules', '@fontsource-variable', 'newsreader', 'files', 'newsreader-latin-wght-normal.woff2'),
+  path.join(out, 'fonts', 'newsreader-latin-wght-normal.woff2'),
+);
 fs.copyFileSync(
   path.join(__dirname, '..', 'node_modules', '@fontsource-variable', 'inter', 'files', 'inter-latin-wght-normal.woff2'),
   path.join(out, 'fonts', 'inter-latin-wght-normal.woff2'),

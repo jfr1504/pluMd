@@ -78,7 +78,7 @@ body.ribbon-collapsed #btn-collapse svg { transform: rotate(180deg); }
 /* ---- Cinta ---- */
 #panels { background: var(--bg-2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 #panels.collapsed { display: none; }
-.panel { display: flex; align-items: stretch; padding: 6px 8px 0; min-height: 94px; overflow-x: auto; overflow-y: hidden; }
+.panel { display: flex; align-items: stretch; padding: 6px 8px 0; min-height: 102px; overflow-x: auto; overflow-y: hidden; }
 /* Los grupos se reparten todo el ancho disponible, sin hueco a la derecha. */
 .grp { display: flex; flex-direction: column; padding: 0 10px; border-right: 1px solid var(--border); flex: 1 1 auto; min-width: max-content; }
 .grp:last-child { border-right: 0; }
@@ -89,8 +89,8 @@ body.ribbon-collapsed #btn-collapse svg { transform: rotate(180deg); }
 .rb { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid transparent; background: transparent; border-radius: var(--r-s); padding: 3px 6px; color: var(--text); white-space: nowrap; }
 .rb:hover { background: var(--bg-3); border-color: var(--border); }
 .rb.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
-.rb-lg { flex-direction: column; min-width: 56px; height: 66px; padding: 6px 8px; gap: 4px; justify-content: flex-start; }
-.rb-lg .rb-label { font-size: 12px; text-align: center; line-height: 1.15; white-space: normal; max-width: 70px; }
+.rb-lg { flex-direction: column; min-width: 56px; height: 74px; padding: 6px 8px 8px; gap: 4px; justify-content: flex-start; }
+.rb-lg .rb-label { font-size: 12px; text-align: center; line-height: 1.2; white-space: normal; max-width: 76px; }
 .rb-sm { justify-content: flex-start; height: 24px; width: 100%; }
 .rb-ic { width: 28px; height: 28px; padding: 0; }
 .stack { display: flex; flex-direction: column; gap: 2px; }

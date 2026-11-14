@@ -1,6 +1,7 @@
 import { icon, hydrateIcons } from './icons.js';
 import { LANGS } from './highlight.js';
 import { listSkins } from './skins.js';
+import { listEsteticas } from './esteticas.js';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
@@ -61,6 +62,8 @@ const builtinTabs = () => [
       grp('Aspecto', ...listSkins().map((k) => lg(`skin-${k.id}`, k.name, k.icon, k.description, `skin-${k.id}`))),
       grp('Modo', lg('theme-light', 'Claro', 'sun', 'Tema claro', 'theme-light'), lg('theme-dark', 'Oscuro', 'moon', 'Tema oscuro', 'theme-dark')),
       grp('Colores', lg('colors', 'Personalizar colores', 'palette', 'Elegir los colores de títulos, negrita, texto y más')),
+      // Las estéticas salen de su registro (esteticasModelo.mjs), como los skins.
+      grp('Estética', ...listEsteticas().map((e) => lg(`estetica-${e.id}`, e.name, e.icon, e.description, `estetica-${e.id}`))),
       grp('Pantalla', lg('fullscreen', 'Pantalla completa', 'fullscreen', 'Oculta la cinta y los paneles para ver todo el documento (F11)', 'fullscreen')),
     ],
   },
