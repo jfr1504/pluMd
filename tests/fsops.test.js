@@ -368,6 +368,7 @@ test('listAll devuelve los documentos de todos los niveles con su ruta relativa 
     t.done();
   }
 });
+
 test('Linux no da por fijo un montaje desconocido ni borra carpetas', { skip: process.platform === 'win32' }, async () => {
   const t = setup();
   try {
