@@ -1,8 +1,7 @@
 name: Compilar y publicar
 
-# - En cada Pull Request hacia main: compila el instalador y el portable para comprobar que funcionan y los guarda 7 días como artefacto.
-# - Al subir una etiqueta vX.Y.Z (por ejemplo v0.1.0): compila y publica una versión en GitHub con el instalador, el portable
-#   y sus sumas de comprobación.
+# - En cada Pull Request hacia main: compila los paquetes de Windows y Linux y los guarda 7 días como artefactos.
+# - Al subir una etiqueta vX.Y.Z: publica Windows y, si está disponible, Linux con sus sumas.
 on:
   pull_request:
     branches: [main]
@@ -14,10 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  portable:
+  windows:
     runs-on: windows-latest
-    permissions:
-      contents: write # solo se usa para crear la versión al publicar una etiqueta
     steps:
       - uses: actions/checkout@v4
 
@@ -52,28 +49,98 @@ jobs:
         shell: bash
         run: |
           cd release
-          sha256sum PluMd-Setup-*.exe PluMd-portable-*.exe > SHA256SUMS.txt
-          cat SHA256SUMS.txt
+          sha256sum PluMd-Setup-*.exe PluMd-portable-*.exe > SHA256SUMS-windows.txt
+          cat SHA256SUMS-windows.txt
 
-      - name: Guardar el resultado (solo pruebas)
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      - name: Guardar paquetes de Windows
         uses: actions/upload-artifact@v4
         with:
-          name: PluMd-portable
+          name: PluMd-Windows
           path: |
             release/PluMd-Setup-*.exe
             release/PluMd-portable-*.exe
-            release/SHA256SUMS.txt
+            release/SHA256SUMS-windows.txt
           retention-days: 7
 
-      - name: Publicar la versión
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Pruebas
+        run: npm test
+
+      - name: Compilar la interfaz
+        run: node scripts/build.js
+
+      - name: Empaquetar AppImage y Debian
+        run: npx electron-builder --linux AppImage deb --publish never
+
+      - name: Sumas de comprobación
+        run: |
+          cd release
+          sha256sum PluMd-*.AppImage PluMd-*.deb > SHA256SUMS-linux.txt
+          cat SHA256SUMS-linux.txt
+
+      - name: Guardar paquetes de Linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: PluMd-Linux
+          path: |
+            release/PluMd-*.AppImage
+            release/PluMd-*.deb
+            release/SHA256SUMS-linux.txt
+          retention-days: 7
+
+  publish:
+    # !cancelled() permite publicar Windows aunque falle Linux.
+    if: ${{ startsWith(github.ref, 'refs/tags/') && !cancelled() && needs.windows.result == 'success' }}
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: PluMd-Windows
+          path: release
+
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.linux.result == 'success' }}
+        continue-on-error: true
+        with:
+          name: PluMd-Linux
+          path: release
+
+      - name: Crear sumas y publicar la versión
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -Eeuo pipefail
+          mkdir -p release
+          cd release
+          shopt -s nullglob
+          setup=(PluMd-Setup-*.exe)
+          portable=(PluMd-portable-*.exe)
+          if (( ${#setup[@]} == 0 || ${#portable[@]} == 0 )); then
+            echo "Faltan paquetes de Windows para publicar." >&2
+            exit 1
+          fi
+          packages=("${setup[@]}" "${portable[@]}" PluMd-*.AppImage PluMd-*.deb)
+          sha256sum "${packages[@]}" > SHA256SUMS.txt
           gh release create "$GITHUB_REF_NAME" \
-            release/PluMd-Setup-*.exe release/PluMd-portable-*.exe release/SHA256SUMS.txt \
+            "${packages[@]}" SHA256SUMS.txt \
             --title "PluMd ${GITHUB_REF_NAME#v}" \
-            --notes-file .github/release-notes.md \
+            --notes-file ../.github/release-notes.md \
             --verify-tag

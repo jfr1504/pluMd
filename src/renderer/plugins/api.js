@@ -6,12 +6,15 @@ import { cm } from './cmExports.js';
 
 export const API_VERSION = 1;
 
-const same = (a, b) => !!a && !!b && String(a).toLowerCase() === String(b).toLowerCase();
-const norm = (p) => String(p).replace(/\//g, '\\').toLowerCase();
+const foldCase = (p) => window.api.platform === 'win32' ? p.toLowerCase() : p;
+const same = (a, b) => !!a && !!b && foldCase(String(a)) === foldCase(String(b));
+const norm = (p) => window.api.platform === 'win32'
+  ? String(p).replace(/\\/g, '/').toLowerCase()
+  : String(p);
 const inside = (child, parent) => {
   const c = norm(child);
-  const p = norm(parent).replace(/\\+$/, '');
-  return c === p || c.startsWith(p + '\\');
+  const p = norm(parent).replace(/\/+$/, '');
+  return c === p || c.startsWith((p || '') + '/');
 };
 
 // Construye el objeto `plumd` que recibe un plugin. Todo lo que registra queda marcado con su id para
