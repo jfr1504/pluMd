@@ -1,4 +1,4 @@
-PluMd 0.4.1: fix for local links with spaces in the path, and a hint on how to open them.
+PluMd 0.4.1: quick open by name (Ctrl+P), and a fix for local links with spaces in the path.
 
 The interface is in Spanish; menu names are given as they appear in the app, with their meaning in brackets. [Versión en español: ver `README.es.md`.]
 
@@ -25,6 +25,7 @@ Linux (experimental, community-supported):
 
 ## New in 0.4.1
 
+- Quick open by name (Ctrl+P), contributed by @Ohkuninush: a box to jump to a document by typing part of its name, ignoring case and accents, with the letters in order. It searches the open folder and its subfolders plus the open tabs, which come first. Also in Archivo > Abrir por nombre [File > Open by name] and in the Ayuda [Help] tab.
 - Local links: a link to a folder or note whose path has spaces, written between angle brackets (`[text](<file:///T:/my folder/my project>)`), did nothing when clicked. It now opens: a folder in the file explorer, a Markdown note in a tab.
 - In Lectura [Reading] mode, hovering over a link shows a hint: Ctrl+click opens it (Cmd+click on Mac).
 
