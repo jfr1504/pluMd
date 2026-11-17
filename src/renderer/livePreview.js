@@ -125,6 +125,11 @@ const rule = Decoration.replace({ widget: new Rule() });
 const lineBreak = Decoration.replace({ widget: new LineBreak() });
 const lineDeco = (cls, attributes) => Decoration.line({ class: cls, attributes });
 const markDeco = (cls) => Decoration.mark({ class: cls });
+// Los vínculos avisan al pasar el ratón de que se abren con Ctrl+clic (Cmd+clic en Mac).
+const linkDeco = Decoration.mark({
+  class: 'cm-lp-link',
+  attributes: { title: (/Mac|iPhone|iPad/.test(navigator.platform) ? 'Cmd' : 'Ctrl') + '+clic para abrir el vínculo' },
+});
 
 // Bloque de propiedades YAML al principio del documento: devuelve su posición final o 0.
 function frontmatterEnd(doc) {
@@ -229,10 +234,10 @@ function build(view, reveal) {
           items.push([node.from, node.to, markDeco('cm-lp-code'), 0]);
           protectedRanges.push([node.from, node.to]);
         } else if (name === 'Link') {
-          if (node.node.getChild('URL') || node.node.getChild('LinkLabel')) items.push([node.from, node.to, markDeco('cm-lp-link'), 0]);
-        } else if (name === 'Autolink') items.push([node.from, node.to, markDeco('cm-lp-link'), 0]);
+          if (node.node.getChild('URL') || node.node.getChild('LinkLabel')) items.push([node.from, node.to, linkDeco, 0]);
+        } else if (name === 'Autolink') items.push([node.from, node.to, linkDeco, 0]);
         else if (name === 'URL' && !['Link', 'Image', 'LinkReference', 'Autolink'].includes(parent)) {
-          items.push([node.from, node.to, markDeco('cm-lp-link'), 0]);
+          items.push([node.from, node.to, linkDeco, 0]);
         } else if (name === 'LinkReference') eachLine(node.from, node.to, 'cm-lp-linkref');
         else if (name === 'CommentBlock') eachLine(node.from, node.to, 'cm-lp-comment');
         else if (name === 'Comment') items.push([node.from, node.to, markDeco('cm-lp-comment'), 0]);
