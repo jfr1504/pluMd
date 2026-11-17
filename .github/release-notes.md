@@ -1,33 +1,40 @@
-PluMd 0.3.0: Excalidraw drawings, and resizing and moving images.
+PluMd 0.4.0: first release with Linux packages, experimental and community-supported.
 
 The interface is in Spanish; menu names are given as they appear in the app, with their meaning in brackets. [Versión en español: ver `README.es.md`.]
 
 ## Download
 
-- `PluMd-Setup-0.3.0.exe`: installer. Lets you choose the folder, adds a Start menu shortcut and registers `.md` files so they open with a double click.
-- `PluMd-portable-0.3.0.exe`: no installation needed. Download it and run it with a double click.
-- `SHA256SUMS.txt`: checksums of both `.exe` files. GitHub builds them from the code in this repository.
+Windows (main platform):
 
-## Linux packages
+- `PluMd-Setup-0.4.0.exe`: installer. Lets you choose the folder, adds a Start menu shortcut and registers `.md` files so they open with a double click.
+- `PluMd-portable-0.4.0.exe`: no installation needed. Download it and run it with a double click.
 
-Linux support is experimental and community-supported. Linux packages will be available in the first release that includes the Linux port; the existing Windows-only 0.3.0 release is unchanged.
+Linux (experimental, community-supported):
 
-- `PluMd-X.Y.Z-amd64.deb`: primary format for Debian and Ubuntu, with desktop integration for Markdown files.
-- `PluMd-X.Y.Z-x86_64.AppImage`: portable alternative; requires executable permissions (`chmod +x PluMd-*.AppImage`) and FUSE 2 compatibility.
-- The release includes Linux packages when the Linux build succeeds. Windows must build successfully for publication; a Linux build failure does not block Windows.
-- `SHA256SUMS.txt` covers every package included in the release.
+- `PluMd-0.4.0-amd64.deb`: primary format for Debian and Ubuntu, with desktop integration for Markdown files.
+- `PluMd-0.4.0-x86_64.AppImage`: portable alternative. It needs executable permissions (`chmod +x PluMd-*.AppImage`) and FUSE 2. Use the `.deb` if FUSE is unavailable.
 
-On Ubuntu 24.04 and later, AppArmor may restrict the user namespaces required by the AppImage. Follow the application-specific profile guidance linked in the README; do not disable the Electron sandbox or global AppArmor restrictions.
-
-Known local documents use the desktop Trash, with no permanent-delete fallback on failure. Network documents require explicit confirmation for permanent deletion. Unknown mounts block deletion. Folder deletion remains disabled on Linux; use the file manager.
+`SHA256SUMS.txt` has the checksums of every file in the release. GitHub builds them from the code in this repository. The Linux packages are published only if the Linux build succeeds; a Linux build failure does not block the Windows files.
 
 ## Before running it
 
-- Windows SmartScreen may show "Windows protected your PC", because the program is not signed yet. Click "More info" and then "Run anyway".
+- None of the files are signed yet. Windows SmartScreen may show "Windows protected your PC": click "More info" and then "Run anyway".
 - The portable version does not register `.md` files. To open them with a double click, use "Open with" on a `.md` file once and choose PluMd, or use the installer.
-- This is a work-in-progress version (0.3.0): there is no MCP connection or plugin catalogue yet.
+- On Ubuntu 24.04 and later, AppArmor may stop the AppImage from starting, because it restricts the user namespaces that Electron's sandbox needs. Follow the application-specific profile guidance in the README; do not disable the Electron sandbox or the global AppArmor restrictions.
+- This is a work-in-progress version (0.4.0): there is no MCP connection or plugin catalogue yet.
 
-## New in 0.3.0
+## New in 0.4.0
+
+- Linux port, contributed by @mjuliac and tested on KDE and Ubuntu by @alonsomaniaco:
+  - Paths, images and drawings follow the rules of each system: case sensitivity on Linux, backslash separators and UNC paths on Windows.
+  - Local documents go to the desktop Trash. If sending a document to the Trash fails, it is not deleted.
+  - Network filesystems (NFS, SMB/CIFS, sshfs, GVFS, WebDAV, rclone and others) are detected from `/proc/mounts`. Deleting a document there needs an explicit confirmation and is permanent. If the mount cannot be determined, deletion is blocked.
+  - Deleting folders from PluMd is not available on Linux; use the file manager.
+  - The `.deb` registers `.md` and `.markdown` files with the desktop. The interface fonts fall back to Cantarell, Ubuntu, Noto Sans and DejaVu Sans Mono when Segoe UI or Cascadia Code are missing.
+  - The workflow builds and tests both platforms on every Pull Request. The port was checked on Windows with the automated tests and a manual test before release.
+- Thanks to both for the work and for the patience through the review rounds.
+
+## Changes in 0.3.0
 
 - Drawings with Excalidraw, contributed by @Ohkuninush (Archivo > Nuevo dibujo [File > New drawing]):
   - A drawing is a `.excalidraw.md` note in the same format as the Excalidraw plugin for Obsidian, so each program can open the other's files.

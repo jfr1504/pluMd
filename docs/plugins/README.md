@@ -53,7 +53,7 @@ Los plugins cargados con `--plugin-dev` se activan solos y se marcan como "desar
 - Los plugins instalados viven en la carpeta de datos de la aplicación. Ayuda > Carpeta de plugins la abre.
 - Ayuda > Administrar plugins lista los plugins instalados, con su estado, y permite activarlos, desactivarlos, abrir sus ajustes, instalar uno desde una carpeta y recargarlos.
 - Un plugin recién instalado está desactivado. Al activarlo por primera vez, PluMd muestra sus permisos declarados y avisa de que un plugin activado tiene los mismos permisos que la aplicación.
-- PluMd nunca borra plugins. Para desinstalar uno, desactívalo y borra su carpeta desde el Explorador de Windows.
+- PluMd nunca borra plugins. Para desinstalar uno, desactívalo y borra su carpeta desde el explorador de archivos del sistema.
 
 ## 4. El manifiesto
 
