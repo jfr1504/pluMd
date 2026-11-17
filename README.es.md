@@ -4,18 +4,25 @@
 
 # PluMd
 
-Editor y visor de ficheros Markdown (`.md`) para Windows, con cinta de opciones tipo Word. Pensado como primer servicio de una plataforma de herramientas internas con arquitectura de plugins.
+Editor y visor de ficheros Markdown (`.md`) para Windows y Linux, con cinta de opciones tipo Word. Pensado como primer servicio de una plataforma de herramientas internas con arquitectura de plugins.
 
 <p align="center"><img src="docs/screenshots/plumd-oscuro.png" alt="PluMd con el panel de carpetas, pestañas de documentos y la cinta de opciones, en modo oscuro"></p>
 
 ## Descargar
 
-Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest) y descarga `PluMd-Setup-X.Y.Z.exe` (instalador, registra los `.md`) o `PluMd-portable-X.Y.Z.exe` (no necesita instalación: se ejecuta con doble clic).
+Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest). En Windows, descarga `PluMd-Setup-X.Y.Z.exe` (instalador, registra los `.md`) o `PluMd-portable-X.Y.Z.exe` (no necesita instalación: se ejecuta con doble clic). En Linux, mira la sección Linux más abajo.
 
 - Windows SmartScreen puede mostrar "Windows protegió su PC", porque el programa aún no está firmado. Pulsa "Más información" y luego "Ejecutar de todos modos".
-- Cada versión incluye `SHA256SUMS.txt` para comprobar que el fichero descargado es el publicado. El `.exe` lo compila GitHub a partir del código de este repositorio.
+- Cada versión incluye `SHA256SUMS.txt` para comprobar que el fichero descargado es el publicado. Los `.exe` y los paquetes de Linux los compila GitHub a partir del código de este repositorio.
 - El portable no registra por sí solo los `.md` como suyos. Para abrirlos con doble clic, usa "Abrir con" sobre un `.md` una vez y elige PluMd, o instala con el instalador.
-- Firma de código: firma gratuita proporcionada por [SignPath.io](https://about.signpath.io/), certificado de la [SignPath Foundation](https://signpath.org/). Consulta la [política de firma de código](CODE_SIGNING_POLICY.md) (en inglés).
+
+## Linux
+
+El soporte de Linux es experimental y lo mantiene la comunidad. Windows sigue siendo la plataforma principal. El formato principal para Debian y Ubuntu es `PluMd-X.Y.Z-amd64.deb`; `PluMd-X.Y.Z-x86_64.AppImage` es la alternativa portable. Descarga los paquetes disponibles desde las versiones. El AppImage necesita permisos de ejecución (`chmod +x PluMd-*.AppImage`) y compatibilidad con FUSE 2; si falta FUSE, usa el `.deb`.
+
+En Ubuntu 24.04 y posteriores, AppArmor puede impedir el arranque del AppImage al restringir los espacios de nombres de usuario que necesita el sandbox de Electron, incluso con FUSE instalado. Consulta la [documentación de Ubuntu](https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/) para configurar un perfil específico para la aplicación. No desactives el sandbox de Electron ni las restricciones globales de AppArmor.
+
+Linux consulta `/proc/mounts` y utiliza el punto de montaje más específico de la ruta real para detectar sistemas de archivos de red (NFS, SMB/CIFS, sshfs, GVFS, WebDAV y rclone, entre otros). Los documentos locales conocidos se envían a la Papelera del escritorio; un fallo nunca provoca borrado permanente. Los documentos de red requieren confirmación explícita para el borrado definitivo. Si no hay información del montaje o su tipo no se reconoce, se bloquea el borrado. El borrado de carpetas sigue deshabilitado en Linux; utiliza el gestor de archivos.
 
 ## Qué hace
 
@@ -25,7 +32,7 @@ Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest)
 - Pegar imágenes: Ctrl+V con una captura en el portapapeles la guarda en `imagenes/aammdd_hhmm.png` junto al documento y deja el vínculo. El documento debe estar guardado. Las imágenes remotas (https) no se cargan hasta pulsar «Cargar» en cada una.
 - Tamaño y posición de las imágenes: arrastra el asa de la esquina inferior derecha para cambiar el tamaño (doble clic: tamaño original); el ancho se guarda como en Obsidian, en la descripción: `![texto|300](ruta)`. Arrastra la propia imagen por el texto para moverla; Esc cancela.
 - Varios documentos a la vez en pestañas. Se abren con Abrir, con doble clic o arrastrando los `.md` sobre la ventana. Se pueden cerrar todas; sin documentos abiertos aparece una pantalla con Nuevo y Abrir.
-- Panel de carpetas a la izquierda, abierto por defecto (se cierra con la cruz y se vuelve a abrir desde Vista) (Archivo > Abrir carpeta, o arrastrando una carpeta): muestra los `.md`, `.markdown` y `.txt`, se abren en pestaña con un clic y se recuerda la última carpeta. Escribir una ruta (`C:\Datos` o `\\servidor\recurso`) en la caja del panel y pulsar Intro abre el diálogo de carpeta ya situado en ella. Con el botón derecho: nuevo documento, nueva carpeta, renombrar, copiar, duplicar, pegar, copiar la ruta o el nombre y borrar. Borrar envía a la Papelera con confirmación; en unidades de red no hay Papelera, así que pide una confirmación aparte y el borrado es definitivo. Una carpeta solo se puede borrar si está vacía o contiene únicamente `.md`, `.markdown` y `.txt` (y subcarpetas con lo mismo), y solo en un disco fijo; va a la Papelera tras una confirmación. Cualquier otra cosa, ficheros ocultos incluidos, se borra desde el Explorador de Windows. Nada se sobrescribe y solo se actúa dentro de la carpeta abierta.
+- Panel de carpetas a la izquierda, abierto por defecto (se cierra con la cruz y se vuelve a abrir desde Vista) (Archivo > Abrir carpeta, o arrastrando una carpeta): muestra los `.md`, `.markdown` y `.txt`, se abren en pestaña con un clic y se recuerda la última carpeta. Escribir una ruta (`C:\Datos` o `\\servidor\recurso`) en la caja del panel y pulsar Intro abre el diálogo de carpeta ya situado en ella. Con el botón derecho: nuevo documento, nueva carpeta, renombrar, copiar, duplicar, pegar, copiar la ruta o el nombre y borrar. Borrar envía a la Papelera con confirmación; en unidades de red de Windows no hay Papelera, así que pide una confirmación aparte y el borrado es definitivo. Una carpeta solo se puede borrar si está vacía o contiene únicamente `.md`, `.markdown` y `.txt` (y subcarpetas con lo mismo), y solo en un disco fijo; va a la Papelera tras una confirmación. Cualquier otra cosa, ficheros ocultos incluidos, se borra desde el gestor de archivos. Nada se sobrescribe y solo se actúa dentro de la carpeta abierta.
 - Abrir por nombre (Ctrl+P): busca documentos por nombre, sin distinguir mayúsculas ni tildes y con las letras en orden, en la carpeta abierta y sus subcarpetas y en las pestañas abiertas, que salen primero. Intro abre el seleccionado.
 - Enlaces internos: `[[Nota]]`, `[[Nota|texto]]` y `[[Nota#Título]]`, como en Obsidian. Se ven como vínculos; Ctrl+clic abre la nota (se busca por nombre, sin distinguir mayúsculas ni tildes, en la carpeta abierta y sus subcarpetas) y ofrece crearla si no existe. Al escribir `[[` se sugieren las notas de la carpeta. El panel de carpetas muestra «Vínculos entrantes»: las notas que enlazan al documento abierto. Los incrustados `![[...]]` no se tratan como enlaces.
 - Los títulos se pueden contraer con la flecha de su izquierda, como en Obsidian.
@@ -57,7 +64,12 @@ npm install
 npm start          # compila y abre la aplicación
 npm test           # pruebas del acceso a ficheros, el pegado de imágenes, el modelo de tablas y los dibujos
 npm run dist       # genera el instalador y la versión portable en release/
+npm run dist:linux # genera AppImage y .deb en release/
 ```
+
+Las pruebas de detección de unidades y borrado de carpetas de Windows solo se ejecutan en Windows (`npm test`); las de Linux se ejecutan en Linux. El CI de la PR compila y prueba ambas plataformas.
+
+El empaquetado incluye todo `dist/**`, incluidos los bundles y las fuentes. La compilación genera `dist/draw.js` y las fuentes de Excalidraw en `dist/excalidraw-assets/fonts`. Al validar una versión, comprueba que ambos recursos estén incluidos en el AppImage y el `.deb`.
 
 ## Estructura
 
@@ -72,7 +84,7 @@ npm run dist       # genera el instalador y la versión portable en release/
 
 ## Estado
 
-Versión de trabajo. Las operaciones con ficheros comprueban siempre la ruta real (sin seguir enlaces fuera de la carpeta abierta), solo se lee y guarda lo que el usuario eligió o está en la carpeta abierta, y el guardado es atómico. El instalador y el portable aún no están firmados. El sistema de plugins está en su primera versión (API 1). Pendiente: tipos de fichero y pestañas con editor propio para plugins, conexión MCP para agentes y un catálogo de plugins.
+Versión de trabajo. Las operaciones con ficheros comprueban siempre la ruta real (sin seguir enlaces fuera de la carpeta abierta), solo se lee y guarda lo que el usuario eligió o está en la carpeta abierta, y el guardado es atómico. El instalador, el portable y los paquetes de Linux aún no están firmados. El sistema de plugins está en su primera versión (API 1). Pendiente: tipos de fichero y pestañas con editor propio para plugins, conexión MCP para agentes y un catálogo de plugins.
 
 ## Colaborar
 
