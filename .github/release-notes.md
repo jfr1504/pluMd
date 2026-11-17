@@ -1,4 +1,4 @@
-PluMd 0.4.0: first release with Linux packages, experimental and community-supported.
+PluMd 0.4.1: quick open by name (Ctrl+P), and a fix for local links with spaces in the path.
 
 The interface is in Spanish; menu names are given as they appear in the app, with their meaning in brackets. [Versión en español: ver `README.es.md`.]
 
@@ -6,13 +6,13 @@ The interface is in Spanish; menu names are given as they appear in the app, wit
 
 Windows (main platform):
 
-- `PluMd-Setup-0.4.0.exe`: installer. Lets you choose the folder, adds a Start menu shortcut and registers `.md` files so they open with a double click.
-- `PluMd-portable-0.4.0.exe`: no installation needed. Download it and run it with a double click.
+- `PluMd-Setup-0.4.1.exe`: installer. Lets you choose the folder, adds a Start menu shortcut and registers `.md` files so they open with a double click.
+- `PluMd-portable-0.4.1.exe`: no installation needed. Download it and run it with a double click.
 
 Linux (experimental, community-supported):
 
-- `PluMd-0.4.0-amd64.deb`: primary format for Debian and Ubuntu, with desktop integration for Markdown files.
-- `PluMd-0.4.0-x86_64.AppImage`: portable alternative. It needs executable permissions (`chmod +x PluMd-*.AppImage`) and FUSE 2. Use the `.deb` if FUSE is unavailable.
+- `PluMd-0.4.1-amd64.deb`: primary format for Debian and Ubuntu, with desktop integration for Markdown files.
+- `PluMd-0.4.1-x86_64.AppImage`: portable alternative. It needs executable permissions (`chmod +x PluMd-*.AppImage`) and FUSE 2. Use the `.deb` if FUSE is unavailable.
 
 `SHA256SUMS.txt` has the checksums of every file in the release. GitHub builds them from the code in this repository. The Linux packages are published only if the Linux build succeeds; a Linux build failure does not block the Windows files.
 
@@ -21,9 +21,15 @@ Linux (experimental, community-supported):
 - None of the files are signed yet. Windows SmartScreen may show "Windows protected your PC": click "More info" and then "Run anyway".
 - The portable version does not register `.md` files. To open them with a double click, use "Open with" on a `.md` file once and choose PluMd, or use the installer.
 - On Ubuntu 24.04 and later, AppArmor may stop the AppImage from starting, because it restricts the user namespaces that Electron's sandbox needs. Follow the application-specific profile guidance in the README; do not disable the Electron sandbox or the global AppArmor restrictions.
-- This is a work-in-progress version (0.4.0): there is no MCP connection or plugin catalogue yet.
+- This is a work-in-progress version (0.4.1): there is no MCP connection or plugin catalogue yet.
 
-## New in 0.4.0
+## New in 0.4.1
+
+- Quick open by name (Ctrl+P), contributed by @Ohkuninush: a box to jump to a document by typing part of its name, ignoring case and accents, with the letters in order. It searches the open folder and its subfolders plus the open tabs, which come first. Also in Archivo > Abrir por nombre [File > Open by name] and in the Ayuda [Help] tab.
+- Local links: a link to a folder or note whose path has spaces, written between angle brackets (`[text](<file:///T:/my folder/my project>)`), did nothing when clicked. It now opens: a folder in the file explorer, a Markdown note in a tab.
+- In Lectura [Reading] mode, hovering over a link shows a hint: Ctrl+click opens it (Cmd+click on Mac).
+
+## Changes in 0.4.0
 
 - Linux port, contributed by @mjuliac and tested on KDE and Ubuntu by @alonsomaniaco:
   - Paths, images and drawings follow the rules of each system: case sensitivity on Linux, backslash separators and UNC paths on Windows.
