@@ -10,15 +10,15 @@ Editor y visor de ficheros Markdown (`.md`) para Windows y Linux, con cinta de o
 
 ## Descargar
 
-Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest) y descarga `PluMd-Setup-X.Y.Z.exe` (instalador, registra los `.md`) o `PluMd-portable-X.Y.Z.exe` (no necesita instalación: se ejecuta con doble clic).
+Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest). En Windows, descarga `PluMd-Setup-X.Y.Z.exe` (instalador, registra los `.md`) o `PluMd-portable-X.Y.Z.exe` (no necesita instalación: se ejecuta con doble clic). En Linux, mira la sección Linux más abajo.
 
 - Windows SmartScreen puede mostrar "Windows protegió su PC", porque el programa aún no está firmado. Pulsa "Más información" y luego "Ejecutar de todos modos".
-- Cada versión incluye `SHA256SUMS.txt` para comprobar que el fichero descargado es el publicado. El `.exe` lo compila GitHub a partir del código de este repositorio.
+- Cada versión incluye `SHA256SUMS.txt` para comprobar que el fichero descargado es el publicado. Los `.exe` y los paquetes de Linux los compila GitHub a partir del código de este repositorio.
 - El portable no registra por sí solo los `.md` como suyos. Para abrirlos con doble clic, usa "Abrir con" sobre un `.md` una vez y elige PluMd, o instala con el instalador.
 
 ## Linux
 
-El soporte de Linux es **experimental y mantenido por la comunidad**. El formato principal para Debian y Ubuntu es `PluMd-X.Y.Z-amd64.deb`; `PluMd-X.Y.Z-x86_64.AppImage` es la alternativa portable. Descarga los paquetes disponibles desde las versiones. El AppImage necesita permisos de ejecución (`chmod +x PluMd-*.AppImage`) y compatibilidad con FUSE 2; si falta FUSE, usa el `.deb`.
+El soporte de Linux es experimental y lo mantiene la comunidad. Windows sigue siendo la plataforma principal. El formato principal para Debian y Ubuntu es `PluMd-X.Y.Z-amd64.deb`; `PluMd-X.Y.Z-x86_64.AppImage` es la alternativa portable. Descarga los paquetes disponibles desde las versiones. El AppImage necesita permisos de ejecución (`chmod +x PluMd-*.AppImage`) y compatibilidad con FUSE 2; si falta FUSE, usa el `.deb`.
 
 En Ubuntu 24.04 y posteriores, AppArmor puede impedir el arranque del AppImage al restringir los espacios de nombres de usuario que necesita el sandbox de Electron, incluso con FUSE instalado. Consulta la [documentación de Ubuntu](https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/) para configurar un perfil específico para la aplicación. No desactives el sandbox de Electron ni las restricciones globales de AppArmor.
 
@@ -82,7 +82,7 @@ El empaquetado incluye todo `dist/**`, incluidos los bundles y las fuentes. La c
 
 ## Estado
 
-Versión de trabajo. Las operaciones con ficheros comprueban siempre la ruta real (sin seguir enlaces fuera de la carpeta abierta), solo se lee y guarda lo que el usuario eligió o está en la carpeta abierta, y el guardado es atómico. El instalador y el portable aún no están firmados. El sistema de plugins está en su primera versión (API 1). Pendiente: tipos de fichero y pestañas con editor propio para plugins, conexión MCP para agentes y un catálogo de plugins.
+Versión de trabajo. Las operaciones con ficheros comprueban siempre la ruta real (sin seguir enlaces fuera de la carpeta abierta), solo se lee y guarda lo que el usuario eligió o está en la carpeta abierta, y el guardado es atómico. El instalador, el portable y los paquetes de Linux aún no están firmados. El sistema de plugins está en su primera versión (API 1). Pendiente: tipos de fichero y pestañas con editor propio para plugins, conexión MCP para agentes y un catálogo de plugins.
 
 ## Colaborar
 

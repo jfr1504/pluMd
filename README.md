@@ -12,15 +12,15 @@ The interface is in Spanish. Menu and button names below are given as they appea
 
 ## Download
 
-Go to the [releases](https://github.com/jfr1504/pluMd/releases/latest) page and download `PluMd-Setup-X.Y.Z.exe` (installer, registers `.md` files) or `PluMd-portable-X.Y.Z.exe` (no installation, runs with a double click).
+Go to the [releases](https://github.com/jfr1504/pluMd/releases/latest) page. On Windows, download `PluMd-Setup-X.Y.Z.exe` (installer, registers `.md` files) or `PluMd-portable-X.Y.Z.exe` (no installation, runs with a double click). On Linux, see the Linux section below.
 
 - Windows SmartScreen may show "Windows protected your PC", because the program is not signed yet. Click "More info" and then "Run anyway".
-- Each release includes `SHA256SUMS.txt` to check that the downloaded file is the published one. GitHub builds the `.exe` files from the code in this repository.
+- Each release includes `SHA256SUMS.txt` to check that the downloaded file is the published one. GitHub builds the `.exe` files and the Linux packages from the code in this repository.
 - The portable version does not register `.md` files by itself. To open them with a double click, use "Open with" on a `.md` file once and choose PluMd, or use the installer.
 
 ## Linux
 
-Linux support is **experimental and community-supported**. The primary format for Debian and Ubuntu is `PluMd-X.Y.Z-amd64.deb`; `PluMd-X.Y.Z-x86_64.AppImage` is the portable alternative. Download the available packages from the releases. The AppImage needs executable permissions (`chmod +x PluMd-*.AppImage`) and FUSE 2 compatibility; use the `.deb` if FUSE is unavailable.
+Linux support is experimental and community-supported. Windows remains the main platform. The primary format for Debian and Ubuntu is `PluMd-X.Y.Z-amd64.deb`; `PluMd-X.Y.Z-x86_64.AppImage` is the portable alternative. Download the available packages from the releases. The AppImage needs executable permissions (`chmod +x PluMd-*.AppImage`) and FUSE 2 compatibility; use the `.deb` if FUSE is unavailable.
 
 On Ubuntu 24.04 and later, AppArmor may prevent the AppImage from starting by restricting the user namespaces required by Electron's sandbox, even with FUSE installed. See the [Ubuntu documentation](https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/) to configure an application-specific profile. Do not disable Electron's sandbox or the global AppArmor restrictions.
 
@@ -86,7 +86,7 @@ Code comments and some file names are in Spanish.
 
 ## Status
 
-Work in progress. File operations always check the real path (links leading outside the open folder are not followed), only files the user chose or that are inside the open folder are read and saved, and saving is atomic. The installer and the portable version are not signed yet. The plugin system is in its first version (API 1). Pending: file types and tabs with their own editor for plugins, an MCP connection for agents and a plugin catalogue.
+Work in progress. File operations always check the real path (links leading outside the open folder are not followed), only files the user chose or that are inside the open folder are read and saved, and saving is atomic. The installer, the portable version and the Linux packages are not signed yet. The plugin system is in its first version (API 1). Pending: file types and tabs with their own editor for plugins, an MCP connection for agents and a plugin catalogue.
 
 ## Contributing
 
