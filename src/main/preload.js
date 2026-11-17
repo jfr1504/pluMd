@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  platform: process.platform,
   readFile: (p) => ipcRenderer.invoke('file:read', p),
   writeFile: (args) => ipcRenderer.invoke('file:write', args),
   openDialog: () => ipcRenderer.invoke('file:openDialog'),

@@ -1,8 +1,8 @@
 # Code signing policy
 
-Free code signing for PluMd is provided by [SignPath.io](https://about.signpath.io/), with a certificate issued by the [SignPath Foundation](https://signpath.org/).
+Status: draft, not in force. PluMd releases are not signed yet. This page is kept for a future application for free code signing from the [SignPath Foundation](https://signpath.org/), through [SignPath.io](https://about.signpath.io/).
 
-Applies to: `PluMd-Setup-X.Y.Z.exe` and `PluMd-portable-X.Y.Z.exe`, as published on the [releases](https://github.com/jfr1504/pluMd/releases) page.
+If signing is approved, it would apply to: `PluMd-Setup-X.Y.Z.exe` and `PluMd-portable-X.Y.Z.exe`, as published on the [releases](https://github.com/jfr1504/pluMd/releases) page.
 
 ## What is signed
 

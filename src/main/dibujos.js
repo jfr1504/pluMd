@@ -9,7 +9,7 @@ const MAX_BIBLIOTECA = 20 * 1024 * 1024; // la biblioteca de formas no debería 
 
 // Nombre válido en Windows: solo el último tramo, sin caracteres prohibidos y con la extensión del dibujo.
 function nombreSeguro(nombre) {
-  const limpio = path
+  const limpio = path.win32
     .basename(String(nombre || ''))
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '')
     .replace(/\.excalidraw\.md$/i, '')

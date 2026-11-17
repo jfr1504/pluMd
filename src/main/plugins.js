@@ -24,9 +24,11 @@ function registerScheme(protocol) {
 }
 
 const isInside = (child, parent) => {
-  const c = path.resolve(child).toLowerCase();
-  const p = path.resolve(parent).toLowerCase();
-  return c === p || c.startsWith(p + path.sep);
+  const c = path.resolve(child);
+  const p = path.resolve(parent);
+  const normalizedChild = process.platform === 'win32' ? c.toLowerCase() : c;
+  const normalizedParent = process.platform === 'win32' ? p.toLowerCase() : p;
+  return normalizedChild === normalizedParent || normalizedChild.startsWith(normalizedParent + path.sep);
 };
 
 // Devuelve un mensaje de error en español o null si el manifiesto es válido.
