@@ -109,7 +109,7 @@ export const askLink = ({ text = '', url = '', existing = false }) =>
         id: 'url',
         label: 'Dirección web o carpeta',
         value: url,
-        placeholder: 'https://…  o  C:\\carpeta  o  \\\\servidor\\recurso',
+        placeholder: 'https://…  o  /home/usuario/carpeta  o  C:\\carpeta  o  \\\\servidor\\recurso',
         required: true,
         browseLabel: 'Carpeta…',
         browse: async () => {
@@ -136,7 +136,7 @@ export const askImage = ({ alt = '', url = '', existing = false }, getFile) =>
           const p = await window.api.pickImage();
           if (!p) return null;
           const file = getFile();
-          return file ? relativeTo(file, p) : p.replace(/\\/g, '/');
+          return file ? relativeTo(file, p) : (window.api.platform === 'win32' ? p.replace(/\\/g, '/') : p.replace(/\\/g, '%5C'));
         },
       },
       { id: 'alt', label: 'Texto alternativo', value: alt },
@@ -248,7 +248,7 @@ export function showAbout(info) {
   head.append(t);
   box.append(head);
 
-  box.append(el('p', null, 'Editor y visor de Markdown para Windows, con cinta de opciones tipo Word y vista de lectura editable. Primer servicio de una plataforma de herramientas con arquitectura de plugins.'));
+  box.append(el('p', null, 'Editor y visor de Markdown para Windows y Linux, con cinta de opciones tipo Word y vista de lectura editable. Primer servicio de una plataforma de herramientas con arquitectura de plugins.'));
 
   const dl = el('dl', 'about-data');
   const add = (k, v) => { dl.append(el('dt', null, k), el('dd', null, v)); };
