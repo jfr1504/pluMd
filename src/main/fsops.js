@@ -24,6 +24,8 @@ const NETWORK_FS = new Set(['nfs', 'nfs4', 'cifs', 'smb3', 'smbfs', 'sshfs', 'fu
 const LOCAL_FS = new Set(['ext2', 'ext3', 'ext4', 'xfs', 'btrfs', 'f2fs', 'zfs', 'vfat', 'exfat',
   'ntfs', 'ntfs3', 'fuseblk', 'fuse.ntfs-3g', 'tmpfs', 'ramfs', 'overlay', 'squashfs', 'iso9660', 'udf']);
 const MAX_SCAN = 20000; // entradas que se revisan como máximo antes de borrar una carpeta
+const MAX_LIST = 5000; // documentos que devuelve listAll como máximo
+const MAX_DEPTH = 12; // niveles de subcarpetas que recorre listAll
 
 // El panel no muestra los nombres que empiezan por punto ni estas carpetas.
 const isHidden = (name) => name.startsWith('.') || SKIP_DIRS.has(name.toLowerCase());
@@ -223,6 +225,23 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
       const collator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
       out.sort((a, b) => (a.dir === b.dir ? collator.compare(a.name, b.name) : a.dir ? -1 : 1));
       return out;
+    },
+
+    // Todos los documentos de la carpeta abierta, en cualquier nivel (para el selector rápido).
+    // Reutiliza listDir, así que respeta ocultos y enlaces que salen de la raíz. Acotado en número y profundidad.
+    async listAll({ limit = MAX_LIST, depth = MAX_DEPTH } = {}) {
+      if (!root) throw new Error(msg.outside);
+      const files = [];
+      let truncated = false;
+      const walk = async (dir, level) => {
+        for (const e of await this.listDir(dir)) {
+          if (files.length >= limit) { truncated = true; return; }
+          if (!e.dir) files.push({ name: e.name, path: e.path, rel: path.relative(root.path, e.path).replace(/\\/g, '/') });
+          else if (level < depth) await walk(e.path, level + 1);
+        }
+      };
+      await walk(root.path, 0);
+      return { files, truncated };
     },
 
     // Crea un documento vacío. Nunca sobrescribe.
