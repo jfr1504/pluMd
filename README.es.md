@@ -4,7 +4,7 @@
 
 # PluMd
 
-Editor y visor de ficheros Markdown (`.md`) para Windows, con cinta de opciones tipo Word. Pensado como primer servicio de una plataforma de herramientas internas con arquitectura de plugins.
+Editor y visor de ficheros Markdown (`.md`) para Windows y Linux, con cinta de opciones tipo Word. Pensado como primer servicio de una plataforma de herramientas internas con arquitectura de plugins.
 
 <p align="center"><img src="docs/screenshots/plumd-oscuro.png" alt="PluMd con el panel de carpetas, pestañas de documentos y la cinta de opciones, en modo oscuro"></p>
 
@@ -17,6 +17,14 @@ Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest)
 - El portable no registra por sí solo los `.md` como suyos. Para abrirlos con doble clic, usa "Abrir con" sobre un `.md` una vez y elige PluMd, o instala con el instalador.
 - Firma de código: firma gratuita proporcionada por [SignPath.io](https://about.signpath.io/), certificado de la [SignPath Foundation](https://signpath.org/). Consulta la [política de firma de código](CODE_SIGNING_POLICY.md) (en inglés).
 
+## Linux
+
+El soporte de Linux es **experimental y mantenido por la comunidad**. El formato principal para Debian y Ubuntu es `PluMd-X.Y.Z-amd64.deb`; `PluMd-X.Y.Z-x86_64.AppImage` es la alternativa portable. Descarga los paquetes disponibles desde las versiones. El AppImage necesita permisos de ejecución (`chmod +x PluMd-*.AppImage`) y compatibilidad con FUSE 2; si falta FUSE, usa el `.deb`.
+
+En Ubuntu 24.04 y posteriores, AppArmor puede impedir el arranque del AppImage al restringir los espacios de nombres de usuario que necesita el sandbox de Electron, incluso con FUSE instalado. Consulta la [documentación de Ubuntu](https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/) para configurar un perfil específico para la aplicación. No desactives el sandbox de Electron ni las restricciones globales de AppArmor.
+
+Linux consulta `/proc/mounts` y utiliza el punto de montaje más específico de la ruta real para detectar sistemas de archivos de red (NFS, SMB/CIFS, sshfs, GVFS, WebDAV y rclone, entre otros). Los documentos locales conocidos se envían a la Papelera del escritorio; un fallo nunca provoca borrado permanente. Los documentos de red requieren confirmación explícita para el borrado definitivo. Si no hay información del montaje o su tipo no se reconoce, se bloquea el borrado. El borrado de carpetas sigue deshabilitado en Linux; utiliza el gestor de archivos.
+
 ## Qué hace
 
 - Abre un fichero `.md` suelto (doble clic, botón Abrir o Ctrl+O). No necesita carpeta de trabajo.
@@ -25,7 +33,7 @@ Ve a la página de [versiones](https://github.com/jfr1504/pluMd/releases/latest)
 - Pegar imágenes: Ctrl+V con una captura en el portapapeles la guarda en `imagenes/aammdd_hhmm.png` junto al documento y deja el vínculo. El documento debe estar guardado. Las imágenes remotas (https) no se cargan hasta pulsar «Cargar» en cada una.
 - Tamaño y posición de las imágenes: arrastra el asa de la esquina inferior derecha para cambiar el tamaño (doble clic: tamaño original); el ancho se guarda como en Obsidian, en la descripción: `![texto|300](ruta)`. Arrastra la propia imagen por el texto para moverla; Esc cancela.
 - Varios documentos a la vez en pestañas. Se abren con Abrir, con doble clic o arrastrando los `.md` sobre la ventana. Se pueden cerrar todas; sin documentos abiertos aparece una pantalla con Nuevo y Abrir.
-- Panel de carpetas a la izquierda, abierto por defecto (se cierra con la cruz y se vuelve a abrir desde Vista) (Archivo > Abrir carpeta, o arrastrando una carpeta): muestra los `.md`, `.markdown` y `.txt`, se abren en pestaña con un clic y se recuerda la última carpeta. Escribir una ruta (`C:\Datos` o `\\servidor\recurso`) en la caja del panel y pulsar Intro abre el diálogo de carpeta ya situado en ella. Con el botón derecho: nuevo documento, nueva carpeta, renombrar, copiar, duplicar, pegar, copiar la ruta o el nombre y borrar. Borrar envía a la Papelera con confirmación; en unidades de red no hay Papelera, así que pide una confirmación aparte y el borrado es definitivo. Una carpeta solo se puede borrar si está vacía o contiene únicamente `.md`, `.markdown` y `.txt` (y subcarpetas con lo mismo), y solo en un disco fijo; va a la Papelera tras una confirmación. Cualquier otra cosa, ficheros ocultos incluidos, se borra desde el Explorador de Windows. Nada se sobrescribe y solo se actúa dentro de la carpeta abierta.
+- Panel de carpetas a la izquierda, abierto por defecto (se cierra con la cruz y se vuelve a abrir desde Vista) (Archivo > Abrir carpeta, o arrastrando una carpeta): muestra los `.md`, `.markdown` y `.txt`, se abren en pestaña con un clic y se recuerda la última carpeta. Escribir una ruta (`C:\Datos` o `\\servidor\recurso`) en la caja del panel y pulsar Intro abre el diálogo de carpeta ya situado en ella. Con el botón derecho: nuevo documento, nueva carpeta, renombrar, copiar, duplicar, pegar, copiar la ruta o el nombre y borrar. Borrar envía a la Papelera con confirmación; en unidades de red de Windows no hay Papelera, así que pide una confirmación aparte y el borrado es definitivo. Una carpeta solo se puede borrar si está vacía o contiene únicamente `.md`, `.markdown` y `.txt` (y subcarpetas con lo mismo), y solo en un disco fijo; va a la Papelera tras una confirmación. Cualquier otra cosa, ficheros ocultos incluidos, se borra desde el gestor de archivos. Nada se sobrescribe y solo se actúa dentro de la carpeta abierta.
 - Los títulos se pueden contraer con la flecha de su izquierda, como en Obsidian.
 - Dibujos con Excalidraw (Archivo > Nuevo dibujo). Un dibujo es una nota `.excalidraw.md` con el mismo formato que el plugin de Excalidraw de Obsidian, así que cada programa puede abrir los ficheros del otro. Un dibujo nuevo se crea al instante en la carpeta Descargas (se cambia en la pestaña Dibujo) y se guarda solo un momento después de cada cambio. La pestaña Dibujo ofrece además pantalla completa (F11), cuadrícula, modo zen y solo lectura, ver todo el dibujo, exportar a PNG o SVG e insertar el dibujo en la nota abierta como imagen en `imagenes/`. La biblioteca de formas de Excalidraw se conserva entre sesiones. Excalidraw solo se carga al abrir el primer dibujo.
 - Menús del botón derecho: en el editor (cortar, copiar, pegar, formato, convertir en título, lista o cita), sobre vínculos, imágenes, tablas (insertar y eliminar filas y columnas, alinear), bloques de código (copiar, cambiar el lenguaje) y títulos (contraer la sección); en las pestañas (cerrar, copiar ruta); y en el panel de carpetas.
@@ -55,7 +63,12 @@ npm install
 npm start          # compila y abre la aplicación
 npm test           # pruebas del acceso a ficheros, el pegado de imágenes, el modelo de tablas y los dibujos
 npm run dist       # genera el instalador y la versión portable en release/
+npm run dist:linux # genera AppImage y .deb en release/
 ```
+
+Las pruebas de detección de unidades y borrado de carpetas de Windows solo se ejecutan en Windows (`npm test`); las de Linux se ejecutan en Linux. El CI de la PR compila y prueba ambas plataformas.
+
+El empaquetado incluye todo `dist/**`, incluidos los bundles y las fuentes. La compilación genera `dist/draw.js` y las fuentes de Excalidraw en `dist/excalidraw-assets/fonts`. Al validar una versión, comprueba que ambos recursos estén incluidos en el AppImage y el `.deb`.
 
 ## Estructura
 

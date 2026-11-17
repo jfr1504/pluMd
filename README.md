@@ -4,7 +4,7 @@
 
 # PluMd
 
-Markdown (`.md`) editor and viewer for Windows, with a Word-style ribbon. It is the first service of a platform of internal tools built around plugins.
+Markdown (`.md`) editor and viewer for Windows and Linux, with a Word-style ribbon. It is the first service of a platform of internal tools built around plugins.
 
 The interface is in Spanish. Menu and button names below are given as they appear in the app, with their meaning in brackets.
 
@@ -19,6 +19,14 @@ Go to the [releases](https://github.com/jfr1504/pluMd/releases/latest) page and 
 - The portable version does not register `.md` files by itself. To open them with a double click, use "Open with" on a `.md` file once and choose PluMd, or use the installer.
 - Code signing: free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by the [SignPath Foundation](https://signpath.org/). See the [code signing policy](CODE_SIGNING_POLICY.md).
 
+## Linux
+
+Linux support is **experimental and community-supported**. The primary format for Debian and Ubuntu is `PluMd-X.Y.Z-amd64.deb`; `PluMd-X.Y.Z-x86_64.AppImage` is the portable alternative. Download the available packages from the releases. The AppImage needs executable permissions (`chmod +x PluMd-*.AppImage`) and FUSE 2 compatibility; use the `.deb` if FUSE is unavailable.
+
+On Ubuntu 24.04 and later, AppArmor may prevent the AppImage from starting by restricting the user namespaces required by Electron's sandbox, even with FUSE installed. See the [Ubuntu documentation](https://documentation.ubuntu.com/security/security-features/privilege-restriction/apparmor/) to configure an application-specific profile. Do not disable Electron's sandbox or the global AppArmor restrictions.
+
+Linux reads `/proc/mounts` and uses the most specific mount point of the real path to detect network filesystems (NFS, SMB/CIFS, sshfs, GVFS, WebDAV and rclone, among others). Known local documents go to the desktop Trash; a failure never triggers permanent deletion. Network documents require explicit confirmation for permanent deletion. If mount information is unavailable or the filesystem type is unrecognised, deletion is blocked. Folder deletion remains disabled on Linux; use the file manager.
+
 ## Features
 
 - Opens a single `.md` file (double click, Abrir [Open] button or Ctrl+O). No working folder needed.
@@ -27,7 +35,7 @@ Go to the [releases](https://github.com/jfr1504/pluMd/releases/latest) page and 
 - Pasting images: Ctrl+V with a screenshot on the clipboard saves it as `imagenes/yymmdd_hhmm.png` next to the document and inserts the link. The document must be saved first. Remote images (https) are not loaded until you click «Cargar» [Load] on each one.
 - Image size and position: drag the handle at the bottom-right corner of an image to resize it (double-click it to restore the original size); the width is stored Obsidian-style in the description, `![text|300](path)`. Drag the image itself through the text to move it; Esc cancels.
 - Several documents at once in tabs. Open them with Abrir, with a double click or by dragging `.md` files onto the window. All tabs can be closed; with no documents open, a screen offers Nuevo [New] and Abrir.
-- Folder panel on the left, open by default (close it with the cross and reopen it from Vista; open a folder with Archivo > Abrir carpeta [File > Open folder] or by dragging it in). It shows `.md`, `.markdown` and `.txt` files, opens them in a tab with one click and remembers the last folder. Typing a path (`C:\Data` or `\\server\share`) in the panel box and pressing Enter opens the folder dialog already placed there. Right click offers new document, new folder, rename, copy, duplicate, paste, copy path or name, and delete. Delete sends the file to the Recycle Bin after a confirmation; network drives have no Recycle Bin, so a separate confirmation is required and the deletion is permanent. A folder can only be deleted if it is empty or holds nothing but `.md`, `.markdown` and `.txt` files (and subfolders with the same), and only on a fixed disk; it goes to the Recycle Bin after a confirmation. Anything else, hidden files included, must be deleted from Windows Explorer. Nothing is overwritten and nothing is touched outside the open folder.
+- Folder panel on the left, open by default (close it with the cross and reopen it from Vista; open a folder with Archivo > Abrir carpeta [File > Open folder] or by dragging it in). It shows `.md`, `.markdown` and `.txt` files, opens them in a tab with one click and remembers the last folder. Typing a path (`C:\Data` or `\\server\share`) in the panel box and pressing Enter opens the folder dialog already placed there. Right click offers new document, new folder, rename, copy, duplicate, paste, copy path or name, and delete. Delete sends the file to the Recycle Bin after a confirmation; Windows network drives have no Recycle Bin, so a separate confirmation is required and the deletion is permanent. A folder can only be deleted if it is empty or holds nothing but `.md`, `.markdown` and `.txt` files (and subfolders with the same), and only on a fixed disk; it goes to the Recycle Bin after a confirmation. Anything else, hidden files included, must be deleted from the file manager. Nothing is overwritten and nothing is touched outside the open folder.
 - Headings can be collapsed with the arrow on their left, as in Obsidian.
 - Drawings with Excalidraw (Archivo > Nuevo dibujo [File > New drawing]). A drawing is a `.excalidraw.md` note in the same format as the Excalidraw plugin for Obsidian, so each program can open the other's files. A new drawing is created straight away in your Downloads folder (changeable in the Dibujo [Drawing] tab) and saved automatically a moment after each change. The Dibujo tab also has full screen (F11), grid, zen and read-only modes, fit to content, export to PNG or SVG, and inserting the drawing into the open note as an image in `imagenes/`. The Excalidraw shape library (Biblioteca [Library]) is kept between sessions. Excalidraw is loaded only when the first drawing is opened.
 - Right-click menus: in the editor (cut, copy, paste, formatting, convert to heading, list or quote), on links, images, tables (insert and delete rows and columns, align), code blocks (copy, change language) and headings (collapse the section); on the tabs (close, copy path); and in the folder panel.
@@ -57,7 +65,12 @@ npm install
 npm start          # builds and opens the app
 npm test           # tests for file access, image pasting, the table model and drawings
 npm run dist       # builds the installer and the portable version in release/
+npm run dist:linux # builds AppImage and .deb packages in release/
 ```
+
+Windows drive detection and folder deletion tests run only on Windows (`npm test`); Linux tests run on Linux. PR CI builds and tests both platforms.
+
+Packaging includes all of `dist/**`, including bundles and fonts. The build generates `dist/draw.js` and the Excalidraw fonts under `dist/excalidraw-assets/fonts`. When validating a release, check that both resources are included in the AppImage and the `.deb`.
 
 ## Structure
 

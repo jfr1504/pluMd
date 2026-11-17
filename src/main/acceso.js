@@ -7,11 +7,15 @@ const path = require('path');
 
 const MD_RE = /\.(md|markdown|txt)$/i;
 
-const key = (p) => path.resolve(p).toLowerCase();
+const key = (p, platform = process.platform) => {
+  const resolved = (platform === 'win32' ? path.win32 : path).resolve(p);
+  return platform === 'win32' ? resolved.toLowerCase() : resolved;
+};
 
 // ¿`childKey` es `parentKey` o está dentro? Ambas ya normalizadas con key().
-function within(childKey, parentKey) {
-  const base = parentKey.endsWith(path.sep) ? parentKey : parentKey + path.sep;
+function within(childKey, parentKey, platform = process.platform) {
+  const sep = platform === 'win32' ? '\\' : path.sep;
+  const base = parentKey.endsWith(sep) ? parentKey : parentKey + sep;
   return childKey === parentKey || childKey.startsWith(base);
 }
 

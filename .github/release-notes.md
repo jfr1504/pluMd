@@ -8,6 +8,19 @@ The interface is in Spanish; menu names are given as they appear in the app, wit
 - `PluMd-portable-0.3.0.exe`: no installation needed. Download it and run it with a double click.
 - `SHA256SUMS.txt`: checksums of both `.exe` files. GitHub builds them from the code in this repository.
 
+## Linux packages
+
+Linux support is experimental and community-supported. Linux packages will be available in the first release that includes the Linux port; the existing Windows-only 0.3.0 release is unchanged.
+
+- `PluMd-X.Y.Z-amd64.deb`: primary format for Debian and Ubuntu, with desktop integration for Markdown files.
+- `PluMd-X.Y.Z-x86_64.AppImage`: portable alternative; requires executable permissions (`chmod +x PluMd-*.AppImage`) and FUSE 2 compatibility.
+- The release includes Linux packages when the Linux build succeeds. Windows must build successfully for publication; a Linux build failure does not block Windows.
+- `SHA256SUMS.txt` covers every package included in the release.
+
+On Ubuntu 24.04 and later, AppArmor may restrict the user namespaces required by the AppImage. Follow the application-specific profile guidance linked in the README; do not disable the Electron sandbox or global AppArmor restrictions.
+
+Known local documents use the desktop Trash, with no permanent-delete fallback on failure. Network documents require explicit confirmation for permanent deletion. Unknown mounts block deletion. Folder deletion remains disabled on Linux; use the file manager.
+
 ## Before running it
 
 - Windows SmartScreen may show "Windows protected your PC", because the program is not signed yet. Click "More info" and then "Run anyway".

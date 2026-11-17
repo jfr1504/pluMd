@@ -15,10 +15,14 @@ const { execFile } = require('child_process');
 const { MD_RE, key: norm, within, realPath } = require('./acceso');
 
 const SKIP_DIRS = new Set(['node_modules', '$recycle.bin', 'system volume information']);
-const INVALID = /[<>:"/\\|?*\x00-\x1f]/;
-const RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
+const INVALID_WINDOWS = /[<>:"/\\|?*\x00-\x1f]/;
+const RESERVED_WINDOWS = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
 const FIXED_DRIVE = 3; // tipos de unidad de Windows: 3 = disco fijo, 4 = red
 const NETWORK_DRIVE = 4;
+const NETWORK_FS = new Set(['nfs', 'nfs4', 'cifs', 'smb3', 'smbfs', 'sshfs', 'fuse.sshfs',
+  'fuse.gvfsd-fuse', 'davfs', 'davfs2', 'fuse.davfs', 'fuse.rclone', '9p', 'ceph', 'fuse.ceph', 'glusterfs', 'fuse.glusterfs']);
+const LOCAL_FS = new Set(['ext2', 'ext3', 'ext4', 'xfs', 'btrfs', 'f2fs', 'zfs', 'vfat', 'exfat',
+  'ntfs', 'ntfs3', 'fuseblk', 'fuse.ntfs-3g', 'tmpfs', 'ramfs', 'overlay', 'squashfs', 'iso9660', 'udf']);
 const MAX_SCAN = 20000; // entradas que se revisan como máximo antes de borrar una carpeta
 
 // El panel no muestra los nombres que empiezan por punto ni estas carpetas.
@@ -30,14 +34,16 @@ const msg = {
   notDoc: 'Solo se pueden gestionar documentos .md, .markdown o .txt.',
   exists: 'Ya existe un documento con ese nombre.',
   invalidName: 'El nombre no es válido: no puede estar vacío ni llevar \\ / : * ? " < > |',
+  unknownMount: 'No se pudo determinar el montaje del documento. No se ha borrado; utiliza el gestor de archivos.',
   network: 'El documento está en una unidad de red: no hay Papelera y el borrado es definitivo.',
   existsDir: 'Ya existe una carpeta o un documento con ese nombre.',
   invalidDirName: 'El nombre no es válido: no puede estar vacío, empezar por un punto, acabar en punto o espacio, ni llevar \\ / : * ? " < > |',
   isRoot: 'No se puede borrar la carpeta abierta en el panel.',
-  linkDir: 'Es un enlace o una unión a otra carpeta: bórrala desde el Explorador de Windows.',
-  notFixed: 'Solo se pueden borrar carpetas en discos fijos. Bórrala desde el Explorador de Windows.',
-  hiddenFiles: (n) => `Esta carpeta contiene ${n} ${n === 1 ? 'fichero' : 'ficheros'} que PluMd no muestra (otros tipos, ocultos o enlaces). Bórrala desde el Explorador de Windows.`,
-  tooBig: 'La carpeta tiene demasiados elementos para comprobarla. Bórrala desde el Explorador de Windows.',
+  linkDir: 'Es un enlace o una unión a otra carpeta: bórrala desde el gestor de archivos.',
+  notFixed: 'Solo se pueden borrar carpetas en discos fijos. Bórrala desde el gestor de archivos.',
+  linuxFolders: 'El borrado de carpetas no está disponible en Linux. Bórrala desde el gestor de archivos.',
+  hiddenFiles: (n) => `Esta carpeta contiene ${n} ${n === 1 ? 'fichero' : 'ficheros'} que PluMd no muestra (otros tipos, ocultos o enlaces). Bórrala desde el gestor de archivos.`,
+  tooBig: 'La carpeta tiene demasiados elementos para comprobarla. Bórrala desde el gestor de archivos.',
   notDir: 'No es una carpeta.',
 };
 
@@ -69,7 +75,8 @@ async function countHiddenFiles(dir, budget = { left: MAX_SCAN }, shown = true) 
   return count;
 }
 
-function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.promises.unlink(p) } = {}) {
+function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.promises.unlink(p), platform = process.platform,
+  readMounts = () => fs.promises.readFile('/proc/mounts', 'utf8') } = {}) {
   let root = null;
   const driveCache = new Map();
 
@@ -84,8 +91,32 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
     }
   };
 
+  // /proc/mounts escapa espacios, tabuladores, saltos de línea y barras inversas en octal.
+  // Se consulta en cada operación: una unidad de red puede montarse o desmontarse con la app abierta.
+  async function linuxNetworkPath(p) {
+    try {
+      const real = await realPath(p);
+      const mounts = await readMounts();
+      let match = null;
+      for (const line of mounts.split('\n')) {
+        if (!line.trim() || line.trimStart().startsWith('#')) continue;
+        const fields = line.trim().split(/\s+/);
+        if (fields.length < 6 || !fields[1].startsWith('/')) return null;
+        const mount = fields[1].replace(/\\(040|011|012|134)/g, (_, octal) => String.fromCharCode(parseInt(octal, 8)));
+        if (real !== mount && !real.startsWith(mount === '/' ? '/' : mount + '/')) continue;
+        if (!match || mount.length >= match.mount.length) match = { mount, type: fields[2] };
+      }
+      if (!match) return null;
+      if (NETWORK_FS.has(match.type)) return true;
+      return LOCAL_FS.has(match.type) ? false : null;
+    } catch {
+      return null;
+    }
+  }
+
   // Tipo de unidad de la ruta: una ruta UNC es de red; sin letra de unidad reconocible o sin poder saberlo, null.
   async function driveTypeOf(p) {
+    if (platform !== 'win32') return null;
     const s = String(p || '');
     if (/^\\\\/.test(s) || /^\/\//.test(s)) return NETWORK_DRIVE;
     const m = /^([a-zA-Z]):/.exec(path.resolve(s));
@@ -97,6 +128,8 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
 
   // En caso de duda (tipo desconocido) se trata como red: es lo prudente para el borrado definitivo.
   async function isNetworkPath(p) {
+    if (platform === 'linux') return (await linuxNetworkPath(p)) !== false;
+    if (platform !== 'win32') return false;
     const t = await driveTypeOf(p);
     return t === null || t === NETWORK_DRIVE;
   }
@@ -106,7 +139,9 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
 
   function cleanName(raw, keepExt) {
     let name = String(raw || '').trim();
-    if (!name || name === '.' || name === '..' || INVALID.test(name) || RESERVED.test(name) || name.length > 200) return null;
+    const invalid = INVALID_WINDOWS;
+    const reserved = platform === 'win32' && RESERVED_WINDOWS.test(name);
+    if (!name || name === '.' || name === '..' || invalid.test(name) || reserved || name.length > 200) return null;
     if (!MD_RE.test(name)) name += keepExt || '.md';
     return name;
   }
@@ -115,7 +150,7 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
   // empezar por punto ni llamarse como las carpetas que el panel oculta (no se vería después de crearla).
   function cleanDirName(raw) {
     const name = String(raw || '').trim();
-    if (!name || name === '.' || name === '..' || INVALID.test(name) || RESERVED.test(name) || name.length > 200) return null;
+    if (!name || name === '.' || name === '..' || INVALID_WINDOWS.test(name) || (platform === 'win32' && RESERVED_WINDOWS.test(name)) || name.length > 200) return null;
     if (isHidden(name) || name.endsWith('.')) return null;
     return name;
   }
@@ -139,7 +174,7 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
       if (norm(p) === root.key || norm(real) === root.realKey) return fail(msg.isRoot);
       if ((await fs.promises.lstat(p)).isSymbolicLink()) return fail(msg.linkDir);
       if (!(await fs.promises.stat(real)).isDirectory()) return fail(msg.notDir);
-      if (!(await isFixedDrive(real))) return fail(msg.notFixed);
+      if (!(await isFixedDrive(real))) return fail(platform === 'linux' ? msg.linuxFolders : msg.notFixed);
       const hidden = await countHiddenFiles(real);
       return hidden ? fail(msg.hiddenFiles(hidden)) : null;
     } catch (e) {
@@ -227,7 +262,7 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
       const target = path.join(path.dirname(p), name);
       if (target === p) return { ok: true, path: p };
       // Un cambio solo de mayúsculas es el mismo fichero en Windows: se permite.
-      if (target.toLowerCase() !== p.toLowerCase() && (await exists(target))) return { ok: false, error: msg.exists };
+      if (norm(target) !== norm(p) && (await exists(target))) return { ok: false, error: msg.exists };
       try {
         await fs.promises.rename(p, target);
         return { ok: true, path: target };
@@ -267,11 +302,19 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
       if (!MD_RE.test(p)) return { ok: false, error: msg.notDoc };
       try {
         const real = await realPath(p);
-        const net = await isNetworkPath(real);
+        const network = platform === 'linux' ? await linuxNetworkPath(real) : await isNetworkPath(real);
+        if (network === null) return fail(msg.unknownMount);
+        const net = network;
         if (net && !permanent) return { ok: false, error: msg.network, needsPermanent: true };
         if (!(await fs.promises.stat(real)).isFile()) return { ok: false, error: msg.notDoc };
         if (net) await unlink(real);
-        else await trash(p);
+        else {
+          try {
+            await trash(p);
+          } catch (e) {
+            return fail(`No se pudo enviar el documento a la Papelera; no se ha borrado. (${e.message})`);
+          }
+        }
         return { ok: true, permanent: net };
       } catch (e) {
         return { ok: false, error: e.message };
@@ -292,7 +335,10 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
         await trash(p);
         return { ok: true };
       } catch (e) {
-        return fail(e.message);
+        const error = e.message.startsWith('Failed to move item to trash')
+        ? 'No se ha podido mover el elemento a la Papelera.'
+        : e.message;
+        return fail(error);
       }
     },
   };

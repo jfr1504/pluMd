@@ -211,7 +211,7 @@ cur = first;
 const view = new EditorView({ parent: $('editor'), state: first.state });
 
 const docName = (d) => {
-  if (d.file) return d.file.split(/[\\/]/).pop();
+  if (d.file) return d.file.split(window.api.platform === 'win32' ? /[\\/]/ : /\//).pop();
   const base = d.kind === 'draw' ? 'Dibujo sin título' : 'Documento sin título';
   return d.untitled > 1 ? `${base} ${d.untitled}` : base;
 };
@@ -449,7 +449,9 @@ function closeDocs(list) {
 
 async function openFile(path) {
   if (!path) return;
-  const same = docs.find((d) => d.file && d.file.toLowerCase() === path.toLowerCase());
+  const same = docs.find((d) => d.file && (window.api.platform === 'win32'
+    ? d.file.toLowerCase() === path.toLowerCase()
+    : d.file === path));
   if (same) return activate(same);
   try {
     const f = await window.api.readFile(path);
@@ -685,10 +687,12 @@ initStatusItems();
 ribbon.update(formatState(view.state));
 
 // ---- Panel de carpetas ----
-const sameFile = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+const sameFile = (a, b) => !!a && !!b && (window.api.platform === 'win32'
+  ? a.toLowerCase() === b.toLowerCase()
+  : a === b);
 // ¿El fichero está dentro de esa carpeta (a cualquier profundidad)?
-const winKey = (p) => p.replace(/\//g, '\\').toLowerCase();
-const insideDir = (file, dir) => !!file && !!dir && winKey(file).startsWith(winKey(dir).replace(/\\+$/, '') + '\\');
+const pathKey = (p) => window.api.platform === 'win32' ? p.replace(/\\/g, '/').toLowerCase() : p;
+const insideDir = (file, dir) => !!file && !!dir && pathKey(file).startsWith(pathKey(dir).replace(/\/+$/, '') + '/');
 let bannerTimer = null;
 function toast(text, sticky = false) {
   showBanner(text, [], sticky);
@@ -820,7 +824,7 @@ async function drawExport(kind) {
     const base = docName(cur).replace(/\.excalidraw\.md$/i, '').replace(/\.md$/i, '');
     const r = await window.api.drawExport(`${base}.${kind}`, kind, data);
     if (!r.ok) throw new Error(r.error);
-    if (!r.canceled) notice(`Exportado como ${r.path.split(/[\\/]/).pop()}`);
+    if (!r.canceled) notice(`Exportado como ${r.path.split(window.api.platform === 'win32' ? /[\\/]/ : /\//).pop()}`);
   } catch (e) {
     toast(`No se pudo exportar el dibujo: ${e.message}`, true);
   }
@@ -900,7 +904,7 @@ function tabMenuItems(d, i) {
     { label: 'Cerrar todas', run: () => closeDocs([...docs]) },
     '-',
     { label: 'Copiar ruta', icon: 'copy', disabled: !d.file, title: unsaved, run: () => { window.api.clipboardWrite(d.file); toast('Ruta copiada.'); } },
-    { label: 'Mostrar en el Explorador de Windows', icon: 'reveal', disabled: !d.file, title: unsaved, run: () => window.api.reveal(d.file) },
+    { label: window.api.platform === 'win32' ? 'Mostrar en el Explorador de Windows' : 'Mostrar en el gestor de archivos', icon: 'reveal', disabled: !d.file, title: unsaved, run: () => window.api.reveal(d.file) },
   ];
   const extra = pluginItems(['tab'], { path: d.file || null });
   return extra.length ? [...items, '-', ...extra] : items;
