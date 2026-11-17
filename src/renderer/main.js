@@ -111,7 +111,7 @@ async function crearNota(w) {
   await openFile(r.path);
 }
 
-// Ctrl+clic sobre un enlace lo abre en el navegador.
+// Ctrl+clic sobre un enlace lo abre (la ayuda emergente lo indica al pasar por encima).
 const linkClicks = EditorView.domEventHandlers({
   click(e, v) {
     if (!(e.ctrlKey || e.metaKey)) return false;
@@ -153,7 +153,8 @@ const imagePaste = EditorView.domEventHandlers({
 
 // Web y correo van al navegador; una carpeta se abre en el Explorador; un .md se abre en una pestaña.
 async function openLink(url) {
-  const u = normalizeUrl(url);
+  // Destino entre ángulos, [txt](<ruta con espacios>): el nodo URL los incluye.
+  const u = normalizeUrl(/^<.*>$/s.test(url) ? url.slice(1, -1) : url);
   if (/^(https?|mailto):/i.test(u)) return window.api.openExternal(u);
   if (u.startsWith('#')) return;
   const r = await window.api.openLocal(u, cur && cur.file ? dirname(cur.file) : null);
