@@ -11,6 +11,8 @@ export function createBacklinks({ onOpen }) {
   const list = document.getElementById('bl-list');
   let turno = 0;
   let abierto = true;
+  let ultimo = null; // último documento pedido
+  let atrasado = false; // hay una actualización pendiente por estar el panel cerrado o plegado
 
   const pintar = (lista) => {
     list.textContent = '';
@@ -44,12 +46,18 @@ export function createBacklinks({ onOpen }) {
     abierto = !abierto;
     box.classList.toggle('collapsed', !abierto);
     head.setAttribute('aria-expanded', String(abierto));
+    if (abierto && atrasado) update(ultimo);
   });
 
-  // Se actualiza al cambiar de documento, al guardar y al abrir otra carpeta. Sin fichero guardado no hay nada que mostrar.
+  // Se actualiza al cambiar de documento, al guardar, al abrir otra carpeta y al mostrar el panel. Sin fichero guardado
+  // no hay nada que mostrar. Con el panel de carpetas oculto o este bloque plegado no se lee la carpeta (en una raíz
+  // enorme cuesta segundos): queda anotado y se actualiza al mostrarlo.
   async function update(file) {
+    ultimo = file;
     const mio = ++turno;
-    if (!file) { box.hidden = true; return; }
+    if (!file) { box.hidden = true; atrasado = false; return; }
+    if (!abierto || box.closest('#sidebar')?.hidden) { atrasado = true; return; }
+    atrasado = false;
     const idx = await refrescar(true);
     if (mio !== turno) return; // llegó una petición más reciente
     box.hidden = !idx.files.length;

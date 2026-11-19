@@ -367,21 +367,16 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
     },
 
     // Documentos de la carpeta abierta (todos los niveles) y los enlaces [[...]] que contiene cada uno.
-    // Solo lee dentro de la raíz (usa listDir) y con límites: número de documentos, profundidad y tamaño.
-    async scanLinks() {
+    // Solo lee dentro de la raíz (usa listDir) y con límites: número de documentos, profundidad, carpetas visitadas,
+    // tamaño y tiempo (el mismo presupuesto para recorrer y para leer). Si se agota, devuelve lo reunido con truncated = true.
+    async scanLinks({ limit = MAX_LINK_FILES, depth = MAX_LINK_DEPTH, maxDirs = MAX_WALK_DIRS, maxMs = MAX_WALK_MS } = {}) {
       if (!root) throw new Error(msg.outside);
-      const files = [];
-      let truncated = false;
-      const walk = async (dir, level) => {
-        for (const e of await this.listDir(dir)) {
-          if (files.length >= MAX_LINK_FILES) { truncated = true; return; }
-          if (!e.dir) files.push({ name: e.name, path: e.path, rel: path.relative(root.path, e.path).replace(/\\/g, '/') });
-          else if (level < MAX_LINK_DEPTH) await walk(e.path, level + 1);
-        }
-      };
-      await walk(root.path, 0);
+      const walked = await walkDocuments((d) => this.listDir(d), root.path, { limit, depth, maxDirs, maxMs });
+      const { files, t0 } = walked;
+      let truncated = walked.truncated;
       const links = [];
       for (const f of files) {
+        if (Date.now() - t0 >= maxMs) { truncated = true; break; }
         try {
           const st = await fs.promises.stat(f.path);
           if (st.size > MAX_LINK_BYTES) continue;

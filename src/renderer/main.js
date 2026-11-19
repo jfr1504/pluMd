@@ -797,7 +797,10 @@ explorer = createExplorer({
   isOpenDirty: (p, isDir) => docs.some((d) => d.dirty && (isDir ? insideDir(d.file, p) : sameFile(d.file, p))),
   confirm: confirmBox,
   notify: toast,
-  onVisibility: (v) => ribbon.setActive({ sidebar: v }),
+  onVisibility: (v) => {
+    ribbon.setActive({ sidebar: v });
+    if (v) backlinks?.update(cur && cur.kind !== 'draw' ? cur.file : null); // pone al día los vínculos si estaban atrasados
+  },
   onRoot: () => { olvidar(); backlinks?.update(cur && cur.kind !== 'draw' ? cur.file : null); },
 });
 backlinks = createBacklinks({
