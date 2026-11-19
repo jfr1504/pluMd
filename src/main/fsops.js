@@ -30,6 +30,8 @@ const LOCAL_FS = new Set(['ext2', 'ext3', 'ext4', 'xfs', 'btrfs', 'f2fs', 'zfs',
 const MAX_SCAN = 20000; // entradas que se revisan como máximo antes de borrar una carpeta
 const MAX_LIST = 5000; // documentos que devuelve listAll como máximo
 const MAX_DEPTH = 12; // niveles de subcarpetas que recorre listAll
+const MAX_WALK_DIRS = 1500; // carpetas que visita un recorrido completo (listAll) como máximo
+const MAX_WALK_MS = 5000; // tiempo máximo de ese recorrido: en una unidad de red enorme devuelve lo reunido hasta entonces
 
 // El panel no muestra los nombres que empiezan por punto ni estas carpetas.
 const isHidden = (name) => name.startsWith('.') || SKIP_DIRS.has(name.toLowerCase());
@@ -79,6 +81,28 @@ async function countHiddenFiles(dir, budget = { left: MAX_SCAN }, shown = true) 
     else if (!(visible && e.isFile() && MD_RE.test(e.name))) count++;
   }
   return count;
+}
+
+// Reúne los documentos de la raíz con listDir y con cuatro límites: documentos, profundidad, carpetas visitadas
+// y tiempo. Si se agota alguno devuelve lo reunido hasta ese momento con truncated = true. t0 es el inicio,
+// para que quien lo llame reparta el mismo presupuesto de tiempo con lo que haga después.
+async function walkDocuments(listDir, rootPath, { limit, depth, maxDirs, maxMs }) {
+  const files = [];
+  const t0 = Date.now();
+  let dirs = 0;
+  let truncated = false;
+  const walk = async (dir, level) => {
+    if (dirs >= maxDirs || Date.now() - t0 >= maxMs) { truncated = true; return; }
+    dirs += 1;
+    for (const e of await listDir(dir)) {
+      if (truncated) return;
+      if (files.length >= limit) { truncated = true; return; }
+      if (!e.dir) files.push({ name: e.name, path: e.path, rel: path.relative(rootPath, e.path).replace(/\\/g, '/') });
+      else if (level < depth) await walk(e.path, level + 1);
+    }
+  };
+  await walk(rootPath, 0);
+  return { files, truncated, t0 };
 }
 
 function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.promises.unlink(p), platform = process.platform,
@@ -232,19 +256,11 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
     },
 
     // Todos los documentos de la carpeta abierta, en cualquier nivel (para el selector rápido).
-    // Reutiliza listDir, así que respeta ocultos y enlaces que salen de la raíz. Acotado en número y profundidad.
-    async listAll({ limit = MAX_LIST, depth = MAX_DEPTH } = {}) {
+    // Reutiliza listDir, así que respeta ocultos y enlaces que salen de la raíz. Acotado en número, profundidad,
+    // carpetas visitadas y tiempo, para que una raíz enorme (una unidad de red) no tarde minutos.
+    async listAll({ limit = MAX_LIST, depth = MAX_DEPTH, maxDirs = MAX_WALK_DIRS, maxMs = MAX_WALK_MS } = {}) {
       if (!root) throw new Error(msg.outside);
-      const files = [];
-      let truncated = false;
-      const walk = async (dir, level) => {
-        for (const e of await this.listDir(dir)) {
-          if (files.length >= limit) { truncated = true; return; }
-          if (!e.dir) files.push({ name: e.name, path: e.path, rel: path.relative(root.path, e.path).replace(/\\/g, '/') });
-          else if (level < depth) await walk(e.path, level + 1);
-        }
-      };
-      await walk(root.path, 0);
+      const { files, truncated } = await walkDocuments((d) => this.listDir(d), root.path, { limit, depth, maxDirs, maxMs });
       return { files, truncated };
     },
 
