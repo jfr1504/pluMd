@@ -392,22 +392,29 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
     // tamaño y tiempo (el mismo presupuesto para recorrer y para leer). Si se agota, devuelve lo reunido con truncated = true.
     async scanLinks({ limit = MAX_LINK_FILES, depth = MAX_LINK_DEPTH, maxDirs = MAX_WALK_DIRS, maxMs = MAX_WALK_MS } = {}) {
       if (!root) throw new Error(msg.outside);
-      const walked = await walkDocuments((d) => this.listDir(d), root.path, { limit, depth, maxDirs, maxMs });
+      if (!(await contains(root.path))) throw new Error(msg.outside);
+      const walked = await walkDocuments(readEntries, root.path, { limit, depth, maxDirs, maxMs });
       const { files, t0 } = walked;
       let truncated = walked.truncated;
-      const links = [];
-      for (const f of files) {
-        if (Date.now() - t0 >= maxMs) { truncated = true; break; }
-        try {
-          const st = await fs.promises.stat(f.path);
-          if (st.size > MAX_LINK_BYTES) continue;
-          const found = enlacesDeDocumento(await fs.promises.readFile(f.path, 'utf8'));
-          if (found.length) links.push({ path: f.path, links: found.map(({ target, heading, line, text }) => ({ target, heading, line, text })) });
-        } catch {
-          /* un fichero ilegible no impide revisar el resto */
+      // Varios documentos a la vez; el resultado conserva el orden de `files`.
+      const found = new Array(files.length).fill(null);
+      let next = 0;
+      const worker = async () => {
+        while (next < files.length) {
+          const i = next++;
+          if (Date.now() - t0 >= maxMs) { truncated = true; return; }
+          try {
+            const st = await fs.promises.stat(files[i].path);
+            if (st.size > MAX_LINK_BYTES) continue;
+            const list = enlacesDeDocumento(await fs.promises.readFile(files[i].path, 'utf8'));
+            if (list.length) found[i] = { path: files[i].path, links: list.map(({ target, heading, line, text }) => ({ target, heading, line, text })) };
+          } catch {
+            /* un fichero ilegible no impide revisar el resto */
+          }
         }
-      }
-      return { files, links, truncated };
+      };
+      await Promise.all(Array.from({ length: Math.min(WALK_PARALLEL, files.length) }, worker));
+      return { files, links: found.filter(Boolean), truncated };
     },
 
     // Envía una carpeta a la Papelera, para poder recuperarla, si dirBlocker no lo impide.
