@@ -123,8 +123,12 @@ body.ribbon-collapsed #btn-collapse svg { transform: rotate(180deg); }
 
 /* ---- Documento ---- */
 main { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
-#editor { padding: 20px 40px 120px; --zoom: 1; }
-#editor[hidden], #no-docs[hidden], #draw[hidden] { display: none; }
+#editor, #editor2 { padding: 20px 40px 120px; --zoom: 1; }
+#editor[hidden], #editor2[hidden], #no-docs[hidden], #draw[hidden] { display: none; }
+/* Vista dividida: cada panel se desplaza por su cuenta. */
+main.split { display: flex; overflow: hidden; }
+main.split #editor, main.split #editor2 { flex: 1 1 0; min-width: 0; height: 100%; overflow: auto; }
+main.split #editor2 { border-left: 1px solid var(--border); }
 #draw { height: 100%; }
 #no-docs { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; height: 100%; min-height: 240px; color: var(--muted); }
 #no-docs p { margin: 0; font-size: 1.05em; }
@@ -132,7 +136,7 @@ main { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
 #editor.source { padding: 0; }
 .cm-editor { outline: none; font-size: calc(16px * var(--zoom)); line-height: 1.65; }
 .cm-editor.cm-focused { outline: none; }
-#editor .cm-scroller { font-family: var(--font-text); }
+#editor .cm-scroller, #editor2 .cm-scroller { font-family: var(--font-text); }
 #editor.source .cm-scroller { font-family: var(--font-mono); font-size: calc(14px * var(--zoom)); }
 #editor .cm-activeLine { background: transparent; }
 #editor .cm-cursor { border-left-color: var(--text); }
@@ -235,7 +239,7 @@ body.img-dragging, body.img-dragging * { cursor: grabbing !important; user-selec
 .dlg-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 
 /* ---- Plegado de títulos (flecha a la izquierda, como en Obsidian) ---- */
-#editor:not(.source) .cm-gutters { background: transparent; border: 0; }
+#editor:not(.source) .cm-gutters, #editor2 .cm-gutters { background: transparent; border: 0; }
 .cm-foldGutter { width: 22px; }
 .cm-foldGutter .cm-gutterElement { display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .cm-fold-arrow { color: var(--muted); font-size: 14px; line-height: 1; opacity: 0; transition: opacity .12s; user-select: none; }
@@ -246,7 +250,7 @@ body.img-dragging, body.img-dragging * { cursor: grabbing !important; user-selec
 
 /* ---- Colores personalizables (valores por defecto: la paleta del tema) ---- */
 main { background: var(--c-bg, var(--bg)); }
-#editor:not(.source) .cm-content { color: var(--c-text, var(--text)); }
+#editor:not(.source) .cm-content, #editor2 .cm-content { color: var(--c-text, var(--text)); }
 .cm-lp-h1 { color: var(--c-h1, inherit); } .cm-lp-h2 { color: var(--c-h2, inherit); } .cm-lp-h3 { color: var(--c-h3, inherit); }
 .cm-lp-h4 { color: var(--c-h4, inherit); } .cm-lp-h5 { color: var(--c-h5, inherit); } .cm-lp-h6 { color: var(--c-h6, var(--muted)); }
 .cm-lp-strong { color: var(--c-bold, inherit); } .cm-lp-em { color: var(--c-italic, inherit); }
