@@ -369,6 +369,28 @@ test('listAll devuelve los documentos de todos los niveles con su ruta relativa 
   }
 });
 
+test('listAll corta el recorrido por carpetas visitadas o por tiempo y devuelve lo reunido', async () => {
+  const t = setup();
+  try {
+    for (const d of ['d1', 'd2', 'd3']) {
+      fs.mkdirSync(path.join(t.root, d));
+      fs.writeFileSync(path.join(t.root, d, `${d}.md`), '');
+    }
+    await t.ops.setRoot(t.root);
+    const completo = await t.ops.listAll();
+    assert.equal(completo.files.length, 3);
+    assert.equal(completo.truncated, false);
+    const pocas = await t.ops.listAll({ maxDirs: 2 }); // la raíz y una subcarpeta
+    assert.equal(pocas.truncated, true);
+    assert.equal(pocas.files.length, 1);
+    const sinTiempo = await t.ops.listAll({ maxMs: 0 });
+    assert.equal(sinTiempo.truncated, true);
+    assert.deepEqual(sinTiempo.files, []);
+  } finally {
+    t.done();
+  }
+});
+
 test('Linux no da por fijo un montaje desconocido ni borra carpetas', { skip: process.platform === 'win32' }, async () => {
   const t = setup();
   try {
@@ -408,6 +430,27 @@ test('scanLinks devuelve los documentos y sus enlaces [[...]], sin leer fuera de
     assert.deepEqual(r.files.map((x) => x.rel).sort(), ['a.md', 'sub/c.md']);
     assert.equal(r.links.length, 1);
     assert.deepEqual(r.links[0].links.map((l) => [l.target, l.heading, l.line]), [['b', '', 1], ['sub/c', 'Intro', 1]]);
+    assert.equal(r.truncated, false);
+  } finally {
+    t.done();
+  }
+});
+
+test('scanLinks corta por carpetas visitadas o por tiempo y devuelve el resultado parcial', async () => {
+  const t = setup();
+  try {
+    for (const d of ['d1', 'd2', 'd3']) {
+      fs.mkdirSync(path.join(t.root, d));
+      fs.writeFileSync(path.join(t.root, d, `${d}.md`), '[[otra]]');
+    }
+    await t.ops.setRoot(t.root);
+    const pocas = await t.ops.scanLinks({ maxDirs: 2 }); // la raíz y una subcarpeta
+    assert.equal(pocas.truncated, true);
+    assert.equal(pocas.files.length, 1);
+    assert.equal(pocas.links.length, 1);
+    const sinTiempo = await t.ops.scanLinks({ maxMs: 0 });
+    assert.equal(sinTiempo.truncated, true);
+    assert.deepEqual(sinTiempo.files, []);
   } finally {
     t.done();
   }

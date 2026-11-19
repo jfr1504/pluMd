@@ -1,5 +1,6 @@
 import { syntaxTree } from '@codemirror/language';
-import { archivos, refrescar } from './wikilinkIndex.js';
+import { startCompletion } from '@codemirror/autocomplete';
+import { archivos, leido, refrescar } from './wikilinkIndex.js';
 import { nombreDeNota } from '../main/wikilinks.js';
 
 // Autocompletado al escribir «[[»: ofrece los documentos de la carpeta abierta por su nombre.
@@ -12,12 +13,25 @@ const enCodigo = (state, pos) => {
   return false;
 };
 
+// ¿Sigue el cursor dentro de un «[[…» sin cerrar? (mientras indexaba, el usuario pudo seguir escribiendo o moverse)
+const siguePendiente = (view) => {
+  const { head } = view.state.selection.main;
+  const linea = view.state.doc.lineAt(head);
+  return /\[\[[^\[\]\n|#]*$/.test(linea.text.slice(0, head - linea.from));
+};
+
 export function wikilinkSource(ctx) {
   const m = ctx.matchBefore(/\[\[[^\[\]\n|#]*/);
   if (!m || enCodigo(ctx.state, m.from)) return null;
   const from = m.from + 2;
   const q = sinTildes(ctx.state.sliceDoc(from, ctx.pos));
-  refrescar(); // por si la lista está desactualizada; las opciones salen de la última lectura
+  const lectura = refrescar(); // por si la lista está desactualizada; las opciones salen de la última lectura
+  if (!leido()) {
+    // Primera lectura de esta carpeta, aún en curso: se avisa y, al terminar, se vuelve a abrir la lista.
+    const view = ctx.view;
+    if (view) lectura.then(() => { if (siguePendiente(view)) startCompletion(view); });
+    return { from, filter: false, options: [{ label: 'Indexando la carpeta…', type: 'text', apply: () => {} }], validFor: () => false };
+  }
   const opciones = archivos()
     .map((a) => ({ a, nombre: nombreDeNota(a.name) }))
     .filter(({ nombre, a }) => !q || sinTildes(nombre).includes(q) || sinTildes(a.rel).includes(q))
