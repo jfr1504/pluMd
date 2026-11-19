@@ -131,6 +131,11 @@ const linkDeco = Decoration.mark({
   class: 'cm-lp-link',
   attributes: { title: (/Mac|iPhone|iPad/.test(navigator.platform) ? 'Cmd' : 'Ctrl') + '+clic para abrir el vínculo' },
 });
+// Los enlaces internos [[Nota]] avisan igual.
+const wikilinkDeco = Decoration.mark({
+  class: 'cm-lp-wikilink',
+  attributes: { title: (/Mac|iPhone|iPad/.test(navigator.platform) ? 'Cmd' : 'Ctrl') + '+clic para abrir la nota' },
+});
 
 // Bloque de propiedades YAML al principio del documento: devuelve su posición final o 0.
 function frontmatterEnd(doc) {
@@ -327,10 +332,10 @@ function build(view, reveal) {
           const bar = w.alias ? l.text.indexOf('|', w.from) : -1;
           const shownFrom = bar >= 0 ? l.from + bar + 1 : a + 2;
           if (active.has(l.number) || z - 2 <= shownFrom) {
-            items.push([a, z, markDeco('cm-lp-wikilink'), 0]);
+            items.push([a, z, wikilinkDeco, 0]);
           } else {
             items.push([a, shownFrom, hidden, 1]);
-            items.push([shownFrom, z - 2, markDeco('cm-lp-wikilink'), 0]);
+            items.push([shownFrom, z - 2, wikilinkDeco, 0]);
             items.push([z - 2, z, hidden, 1]);
           }
         }
