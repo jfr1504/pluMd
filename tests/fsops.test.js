@@ -369,6 +369,21 @@ test('listAll devuelve los documentos de todos los niveles con su ruta relativa 
   }
 });
 
+test('listAll no entra en una junction que sale de la raíz aunque ya no revise cada subcarpeta', async () => {
+  const t = setup();
+  try {
+    fs.mkdirSync(path.join(t.root, 'sub'));
+    fs.writeFileSync(path.join(t.root, 'sub', 'dentro.md'), '');
+    fs.writeFileSync(path.join(t.fuera, 'fuera.md'), '');
+    fs.symlinkSync(t.fuera, path.join(t.root, 'sub', 'escape'), 'junction');
+    await t.ops.setRoot(t.root);
+    const r = await t.ops.listAll();
+    assert.deepEqual(r.files.map((x) => x.rel), ['sub/dentro.md']);
+  } finally {
+    t.done();
+  }
+});
+
 test('listAll corta el recorrido por carpetas visitadas o por tiempo y devuelve lo reunido', async () => {
   const t = setup();
   try {
