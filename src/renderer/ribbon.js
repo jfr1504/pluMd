@@ -1,6 +1,7 @@
 import { icon, hydrateIcons } from './icons.js';
 import { LANGS } from './highlight.js';
 import { listSkins } from './skins.js';
+import { listEsteticas } from './esteticas.js';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
@@ -53,7 +54,7 @@ const builtinTabs = () => [
   {
     id: 'view',
     groups: [
-      grp('Vistas', lg('mode-read', 'Lectura', 'eye', 'Documento limpio, editable (Ctrl+E)', 'mode-read'), lg('mode-source', 'Código', 'filecode', 'Markdown sin renderizar (Ctrl+E)', 'mode-source')),
+      grp('Vistas', lg('mode-read', 'Lectura', 'eye', 'Documento limpio, editable (Ctrl+E)', 'mode-read'), lg('mode-source', 'Código', 'filecode', 'Markdown sin renderizar (Ctrl+E)', 'mode-source'), lg('split-view', 'Dividida', 'split', 'Código a la izquierda y Lectura a la derecha, a la vez (Ctrl+\\)', 'split-view')),
       grp('Zoom', lg('zoom-in', 'Acercar', 'zoomin'), lg('zoom-out', 'Alejar', 'zoomout'), lg('zoom-reset', '100%', 'search', 'Zoom al 100%')),
       grp('Panel', lg('toggle-sidebar', 'Panel de carpetas', 'sidebar', 'Mostrar u ocultar el panel de carpetas (Ctrl+Mayús+E)', 'sidebar')),
       grp('Esquema', lg('fold-all', 'Contraer títulos', 'chevronup', 'Contraer todos los títulos (Ctrl+Mayús+[ en uno)'), lg('unfold-all', 'Expandir todo', 'chevron', 'Expandir todos los títulos plegados')),
@@ -61,6 +62,8 @@ const builtinTabs = () => [
       grp('Aspecto', ...listSkins().map((k) => lg(`skin-${k.id}`, k.name, k.icon, k.description, `skin-${k.id}`))),
       grp('Modo', lg('theme-light', 'Claro', 'sun', 'Tema claro', 'theme-light'), lg('theme-dark', 'Oscuro', 'moon', 'Tema oscuro', 'theme-dark')),
       grp('Colores', lg('colors', 'Personalizar colores', 'palette', 'Elegir los colores de títulos, negrita, texto y más')),
+      // Las estéticas salen de su registro (esteticasModelo.mjs), como los skins.
+      grp('Estética', ...listEsteticas().map((e) => lg(`estetica-${e.id}`, e.name, e.icon, e.description, `estetica-${e.id}`))),
       grp('Pantalla', lg('fullscreen', 'Pantalla completa', 'fullscreen', 'Oculta la cinta y los paneles para ver todo el documento (F11)', 'fullscreen')),
     ],
   },

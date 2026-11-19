@@ -1,0 +1,271 @@
+/* Estética Folio: aspecto moderno y editorial para toda la aplicación.
+   - Forma: esquinas más redondeadas, superficies con profundidad (sombras en capas, cristal en menús y cuadros).
+   - Tipografía: Inter en la interfaz y el cuerpo, Newsreader (serifa) en los titulares del documento.
+   - Movimiento: transiciones cortas en botones, pestañas, paneles y cuadros; fundido al cambiar de modo o de tema.
+     Solo se animan transform y opacity (más colores y sombras en los estados al pasar el ratón); nada de layout.
+   - Va por encima del aspecto (skin) y del modo claro u oscuro: usa sus colores (--accent, --bg…), no los sustituye.
+   Newsreader: © The Newsreader Project Authors, SIL Open Font License 1.1
+   (ver node_modules/@fontsource-variable/newsreader/LICENSE). Inter: © The Inter Project Authors, SIL OFL 1.1. */
+
+@font-face {
+  font-family: 'Newsreader Variable';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('../fonts/newsreader-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ---- Tokens ---- */
+:root[data-estetica='folio'] {
+  --folio-display: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+  --folio-body: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+  --folio-paper: oklch(98.5% 0.006 90);
+  --folio-column: 720px;
+  --folio-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --folio-pop: cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+:root[data-estetica='folio'][data-theme='dark'] { --folio-paper: var(--bg); }
+/* html:root sube la especificidad para quedar por encima de los tokens de forma de cualquier skin. */
+html:root[data-estetica='folio'] {
+  --r-s: 8px;
+  --r-m: 12px;
+  --r-l: 16px;
+  --font-ui: var(--folio-body);
+  --shadow-pop: 0 16px 40px -12px rgba(16, 14, 40, .35), 0 2px 6px rgba(16, 14, 40, .12);
+  --shadow-dlg: 0 32px 80px -24px rgba(16, 14, 40, .5), 0 4px 12px rgba(16, 14, 40, .15);
+  --folio-glass: color-mix(in oklab, var(--bg) 84%, transparent);
+  --folio-hover: color-mix(in oklab, var(--accent) 9%, transparent);
+  --folio-ring: color-mix(in oklab, var(--accent) 30%, transparent);
+  --folio-lift: 0 8px 16px -10px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
+/* ---- Barra de título y pestañas de la cinta ---- */
+:root[data-estetica='folio'] #titlebar { background: linear-gradient(to bottom, var(--bg), color-mix(in oklab, var(--bg) 70%, var(--bg-2))); border-bottom-color: transparent; }
+:root[data-estetica='folio'] #titlebar .brand { box-shadow: var(--folio-lift); }
+:root[data-estetica='folio'] #tabs { background: color-mix(in oklab, var(--bg) 70%, var(--bg-2)); }
+:root[data-estetica='folio'] #tabs .tab { position: relative; border-bottom-color: transparent; border-radius: var(--r-s) var(--r-s) 0 0; transition: color .14s ease, background-color .14s ease; }
+:root[data-estetica='folio'] #tabs .tab:hover { background: var(--folio-hover); }
+:root[data-estetica='folio'] #tabs .tab.active { color: var(--accent); background: transparent; }
+/* El subrayado de la pestaña activa crece desde el centro. */
+:root[data-estetica='folio'] #tabs .tab::after { content: ''; position: absolute; left: 16px; right: 16px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); transform: scaleX(0); transition: transform .28s var(--folio-ease); }
+:root[data-estetica='folio'] #tabs .tab.active::after { transform: scaleX(1); }
+:root[data-estetica='folio'] #tabs .tab.file { border-radius: var(--r-s); box-shadow: var(--folio-lift); transition: transform .2s var(--folio-ease), box-shadow .2s var(--folio-ease); }
+:root[data-estetica='folio'] #tabs .tab.file::after { display: none; }
+:root[data-estetica='folio'] #tabs .tab.file:hover { transform: translateY(-1px); background: var(--accent); }
+:root[data-estetica='folio'] #tabs .tab.file:active { transform: scale(.96); }
+
+/* ---- Cinta: una franja con relieve, grupos separados por un hilo que se desvanece ---- */
+:root[data-estetica='folio'] #panels { position: relative; z-index: 3; background: var(--bg-2); border-top: 0; border-bottom-color: transparent; box-shadow: 0 12px 24px -18px rgba(16, 14, 40, .5); }
+:root[data-estetica='folio'] .panel { animation: folio-panel .24s var(--folio-ease) both; }
+:root[data-estetica='folio'] .grp { position: relative; border-right: 0; }
+:root[data-estetica='folio'] .grp:not(:last-child)::after { content: ''; position: absolute; right: 0; top: 8px; bottom: 8px; width: 1px; background: linear-gradient(to bottom, transparent, var(--border), transparent); }
+:root[data-estetica='folio'] .grp-label { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; }
+
+/* Botones: se elevan al pasar el ratón, se hunden al pulsar y el icono crece un poco. */
+:root[data-estetica='folio'] .rb { border-radius: var(--r-s); transition: background-color .14s ease, color .14s ease, box-shadow .22s var(--folio-ease), transform .22s var(--folio-ease); }
+:root[data-estetica='folio'] .rb:hover { background: var(--folio-hover); border-color: transparent; transform: translateY(-1px); }
+:root[data-estetica='folio'] .rb:active { transform: translateY(0) scale(.96); transition-duration: .06s; }
+:root[data-estetica='folio'] .rb.active { background: var(--accent-soft); border-color: transparent; box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 50%, transparent), var(--folio-lift); }
+:root[data-estetica='folio'] .rb .ico { transition: transform .24s var(--folio-ease); }
+:root[data-estetica='folio'] .rb:hover .ico { transform: scale(1.1); }
+:root[data-estetica='folio'] .gallery .st.active { border-color: transparent; box-shadow: inset 0 0 0 1px var(--accent); }
+
+/* ---- Pestañas de documentos ---- */
+:root[data-estetica='folio'] #doctabs { background: color-mix(in oklab, var(--bg) 60%, var(--bg-2)); border-bottom-color: transparent; }
+:root[data-estetica='folio'] .dtab { border-color: transparent; border-radius: var(--r-s) var(--r-s) 0 0; transition: background-color .16s ease, color .16s ease, box-shadow .24s var(--folio-ease); }
+:root[data-estetica='folio'] .dtab:hover { background: var(--folio-hover); }
+:root[data-estetica='folio'] .dtab.active { background: var(--bg); border-top-color: var(--accent); box-shadow: 0 -10px 20px -12px rgba(16, 14, 40, .45); }
+:root[data-estetica='folio'] .dtab-close, :root[data-estetica='folio'] .dtab-new { border-radius: 999px; transition: background-color .14s ease, color .14s ease, transform .2s var(--folio-ease); }
+:root[data-estetica='folio'] .dtab-close:hover, :root[data-estetica='folio'] .dtab-new:hover { background: var(--accent-soft); color: var(--accent); transform: scale(1.12); }
+
+/* ---- Panel de carpetas ---- */
+:root[data-estetica='folio'] #sidebar { background: color-mix(in oklab, var(--bg) 60%, var(--bg-2)); border-right-color: transparent; box-shadow: 12px 0 24px -20px rgba(16, 14, 40, .45); position: relative; z-index: 2; }
+:root[data-estetica='folio'] #sidebar:not([hidden]) { animation: folio-sidebar .32s var(--folio-ease) both; }
+:root[data-estetica='folio'] .tn-row { border-radius: var(--r-s); transition: background-color .14s ease, box-shadow .24s var(--folio-ease); }
+:root[data-estetica='folio'] .tn-row:hover { background: var(--folio-hover); }
+:root[data-estetica='folio'] .tn-row.sel { background: var(--folio-hover); }
+:root[data-estetica='folio'] .tn-row.active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+:root[data-estetica='folio'] #sb-filter { border-radius: var(--r-m); transition: border-color .16s ease, box-shadow .2s var(--folio-ease); }
+:root[data-estetica='folio'] #splitter:hover, :root[data-estetica='folio'] body.resizing #splitter { opacity: .7; }
+:root[data-estetica='folio'] #sb-backlinks { border-top-color: transparent; box-shadow: 0 -12px 24px -20px rgba(16, 14, 40, .5); }
+:root[data-estetica='folio'] .bl-note, :root[data-estetica='folio'] .bl-link { border-radius: var(--r-s); transition: background-color .14s ease; }
+
+/* ---- Cuadros de diálogo, paleta y menús: cristal, desenfoque y entrada con rebote suave ---- */
+:root[data-estetica='folio'] #dlg { background: color-mix(in oklab, #0b0a1a 40%, transparent); backdrop-filter: blur(8px) saturate(1.15); }
+:root[data-estetica='folio'] #dlg:not([hidden]) { animation: folio-fade .22s ease-out both; }
+:root[data-estetica='folio'] #dlg .dlg-box,
+:root[data-estetica='folio'] #dlg form { border-radius: var(--r-l); border-color: color-mix(in oklab, var(--border) 60%, transparent); animation: folio-pop .34s var(--folio-pop) both; }
+:root[data-estetica='folio'] #dlg input { border-radius: var(--r-m); transition: border-color .16s ease, box-shadow .2s var(--folio-ease); }
+:root[data-estetica='folio'] #dlg input:focus,
+:root[data-estetica='folio'] #sb-filter:focus,
+:root[data-estetica='folio'] .pal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--folio-ring); }
+:root[data-estetica='folio'] .pal-input { border-radius: var(--r-m); transition: border-color .16s ease, box-shadow .2s var(--folio-ease); }
+:root[data-estetica='folio'] .pal-row { border-radius: var(--r-s); transition: background-color .12s ease, box-shadow .2s var(--folio-ease); }
+:root[data-estetica='folio'] .pal-row.sel { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+:root[data-estetica='folio'] .popup { background: var(--folio-glass); backdrop-filter: blur(16px) saturate(1.25); border-color: color-mix(in oklab, var(--border) 60%, transparent); }
+:root[data-estetica='folio'] .popup:not([hidden]) { animation: folio-in .22s var(--folio-ease) both; }
+:root[data-estetica='folio'] .menu button { border-radius: var(--r-s); transition: background-color .12s ease; }
+:root[data-estetica='folio'] .menu button:hover { background: var(--folio-hover); }
+:root[data-estetica='folio'] #dlg button,
+:root[data-estetica='folio'] #banner button { border-radius: var(--r-m); transition: background-color .14s ease, border-color .14s ease, box-shadow .22s var(--folio-ease), transform .22s var(--folio-ease); }
+:root[data-estetica='folio'] #dlg button:hover,
+:root[data-estetica='folio'] #banner button:hover { transform: translateY(-1px); }
+:root[data-estetica='folio'] #dlg button:active,
+:root[data-estetica='folio'] #banner button:active { transform: scale(.97); transition-duration: .06s; }
+:root[data-estetica='folio'] button.primary { box-shadow: var(--folio-lift); }
+
+/* ---- Avisos y barra de estado ---- */
+:root[data-estetica='folio'] #banner:not([hidden]) { animation: folio-drop .26s var(--folio-ease) both; }
+:root[data-estetica='folio'] #float-note { border-radius: 999px; box-shadow: var(--shadow-pop); }
+:root[data-estetica='folio'] #statusbar { background: color-mix(in oklab, var(--bg) 60%, var(--bg-2)); border-top-color: transparent; box-shadow: 0 -12px 24px -20px rgba(16, 14, 40, .45); }
+:root[data-estetica='folio'] #no-docs:not([hidden]) { animation: folio-in .3s var(--folio-ease) both; }
+
+/* ---- Barras de desplazamiento finas ---- */
+:root[data-estetica='folio'] ::-webkit-scrollbar { width: 12px; height: 12px; }
+:root[data-estetica='folio'] ::-webkit-scrollbar-track { background: transparent; }
+:root[data-estetica='folio'] ::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--muted) 40%, transparent); background-clip: padding-box; border: 3px solid transparent; border-radius: 12px; }
+:root[data-estetica='folio'] ::-webkit-scrollbar-thumb:hover { background: color-mix(in oklab, var(--accent) 65%, transparent); background-clip: padding-box; }
+:root[data-estetica='folio'] ::-webkit-scrollbar-corner { background: transparent; }
+
+/* ---- Documento ---- */
+:root[data-estetica='folio'] main { background: var(--c-bg, var(--folio-paper)); }
+:root[data-estetica='folio'] #editor:not(.source),
+:root[data-estetica='folio'] #editor2 { padding: 48px 64px 160px; }
+:root[data-estetica='folio'] #editor:not(.source) .cm-editor,
+:root[data-estetica='folio'] #editor2 .cm-editor { max-width: var(--folio-column); margin: 0 auto; line-height: 1.75; }
+:root[data-estetica='folio'] #editor:not(.source) .cm-scroller,
+:root[data-estetica='folio'] #editor2 .cm-scroller { font-family: var(--folio-body); }
+:root[data-estetica='folio'] #editor .cm-cursor { border-left-color: var(--accent); border-left-width: 2px; }
+:root[data-estetica='folio'] .cm-lp-check { accent-color: var(--accent); }
+
+/* Titulares: serifa, contraste de escala y aire por encima (cada título es una línea del editor). */
+:root[data-estetica='folio'] .cm-lp-h1,
+:root[data-estetica='folio'] .cm-lp-h2,
+:root[data-estetica='folio'] .cm-lp-h3,
+:root[data-estetica='folio'] .cm-lp-h4,
+:root[data-estetica='folio'] .cm-lp-h5 { font-family: var(--folio-display); letter-spacing: -0.01em; }
+:root[data-estetica='folio'] .cm-lp-h1 { font-size: 2.5em; font-weight: 500; line-height: 1.15; padding-top: 24px; padding-bottom: 8px; }
+:root[data-estetica='folio'] .cm-lp-h2 { font-size: 1.75em; font-weight: 500; line-height: 1.25; padding-top: 24px; padding-bottom: 8px; }
+:root[data-estetica='folio'] .cm-lp-h3 { font-size: 1.375em; font-weight: 560; line-height: 1.3; padding-top: 16px; }
+:root[data-estetica='folio'] .cm-lp-h4 { font-size: 1.125em; font-weight: 600; padding-top: 16px; }
+:root[data-estetica='folio'] .cm-lp-h5 { font-size: 1em; font-weight: 600; padding-top: 8px; }
+:root[data-estetica='folio'] .cm-lp-h6 { font-size: .8125em; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding-top: 8px; }
+
+/* Cita y vínculos con carácter propio. */
+:root[data-estetica='folio'] .cm-lp-quote { font-family: var(--folio-display); font-style: italic; font-size: 1.125em; border-left-width: 2px; padding-left: 24px; }
+:root[data-estetica='folio'] .cm-lp-link,
+:root[data-estetica='folio'] .cm-lp-wikilink { text-decoration-thickness: 1px; text-underline-offset: 4px; transition: color .15s ease, text-decoration-color .15s ease; }
+:root[data-estetica='folio'] .cm-lp-link:hover,
+:root[data-estetica='folio'] .cm-lp-wikilink:hover { text-decoration-color: transparent; }
+
+/* ---- La hoja: el documento es una página que flota sobre el escritorio ---- */
+:root[data-estetica='folio'] main { background: color-mix(in oklab, var(--c-bg, var(--bg)) 94%, var(--text)); }
+:root[data-estetica='folio'][data-theme='dark'] main { background: color-mix(in oklab, var(--c-bg, var(--bg)) 70%, #000); }
+:root[data-estetica='folio'] main:not(.split) #editor:not(.source) {
+  width: min(880px, calc(100% - 32px));
+  margin: 28px auto 96px;
+  padding: 56px 72px 120px;
+  min-height: calc(100% - 124px);
+  background: var(--c-bg, var(--bg));
+  border-radius: var(--r-l);
+  box-shadow: 0 1px 2px rgba(16, 14, 40, .06), 0 12px 32px -14px rgba(16, 14, 40, .22), 0 40px 80px -40px rgba(16, 14, 40, .25);
+}
+:root[data-estetica='folio'][data-theme='dark'] main:not(.split) #editor:not(.source) { box-shadow: 0 0 0 1px color-mix(in oklab, var(--border) 70%, transparent), 0 24px 60px -24px rgba(0, 0, 0, .7); }
+@media (max-width: 760px) { :root[data-estetica='folio'] main:not(.split) #editor:not(.source) { padding: 32px 24px 96px; margin-top: 12px; } }
+
+/* Detalles de lectura. */
+:root[data-estetica='folio'] .cm-lp-h1 { padding-bottom: 18px; background: linear-gradient(var(--accent), var(--accent)) no-repeat left bottom / 56px 3px; border-radius: 2px; }
+:root[data-estetica='folio'] .cm-lp-bullet, :root[data-estetica='folio'] .cm-lp-check { color: var(--accent); }
+:root[data-estetica='folio'] .cm-lp-quote { background: linear-gradient(to right, var(--accent-soft), transparent 70%); border-radius: 0 var(--r-m) var(--r-m) 0; padding-top: 6px; padding-bottom: 6px; }
+:root[data-estetica='folio'] .cm-lp-code, :root[data-estetica='folio'] .cm-lp-kbd { border-radius: 6px; }
+:root[data-estetica='folio'] .cm-lp-codeblock { border-radius: 0; }
+:root[data-estetica='folio'] .cm-lp-cb-first { border-top-left-radius: var(--r-m); border-top-right-radius: var(--r-m); }
+:root[data-estetica='folio'] .cm-lp-cb-last { border-bottom-left-radius: var(--r-m); border-bottom-right-radius: var(--r-m); }
+:root[data-estetica='folio'] .cm-lp-hr { opacity: .7; }
+:root[data-estetica='folio'] #editor ::selection, :root[data-estetica='folio'] #editor .cm-selectionBackground { border-radius: 3px; }
+
+/* Barra de estado y zoom con más carácter. */
+:root[data-estetica='folio'] #statusbar input[type=range] { height: 4px; border-radius: 4px; cursor: pointer; }
+:root[data-estetica='folio'] #sb-filter { background: var(--bg); }
+:root[data-estetica='folio'] #sidebar > header, :root[data-estetica='folio'] .sb-head { letter-spacing: .02em; }
+
+/* La cinta entra en cascada: cada grupo aparece con un pequeño retardo. */
+:root[data-estetica='folio'] .panel > .grp { animation: folio-in .34s var(--folio-ease) both; }
+:root[data-estetica='folio'] .panel > .grp:nth-child(2) { animation-delay: .04s; }
+:root[data-estetica='folio'] .panel > .grp:nth-child(3) { animation-delay: .08s; }
+:root[data-estetica='folio'] .panel > .grp:nth-child(4) { animation-delay: .12s; }
+:root[data-estetica='folio'] .panel > .grp:nth-child(5) { animation-delay: .16s; }
+:root[data-estetica='folio'] .panel > .grp:nth-child(n+6) { animation-delay: .2s; }
+
+/* Resplandor de acento tras el botón de Archivo y en la pestaña de cinta activa. */
+:root[data-estetica='folio'] #tabs .tab.file { background: linear-gradient(135deg, var(--accent), color-mix(in oklab, var(--accent) 70%, #fff)); }
+
+/* ---- Geometría de la cinta: los botones grandes con rótulo de dos líneas caben sin pisar el borde ---- */
+:root[data-estetica='folio'] .panel { min-height: 110px; padding-top: 8px; }
+:root[data-estetica='folio'] .rb-lg { height: 78px; padding: 8px 8px 10px; gap: 6px; }
+:root[data-estetica='folio'] .rb-lg .rb-label { line-height: 1.2; max-width: 76px; text-wrap: balance; }
+:root[data-estetica='folio'] .grp-label { padding: 4px 0 6px; line-height: 1.2; }
+/* El botón activo se marca con anillo y fondo; la sombra de relieve queda difusa y sin desplazar, para que no parezca un subrayado. */
+:root[data-estetica='folio'] .rb.active { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 50%, transparent), 0 0 14px -4px color-mix(in oklab, var(--accent) 55%, transparent); }
+:root[data-estetica='folio'] .rb.active:hover { transform: none; }
+
+/* ---- Movimiento: solo transform y opacity ---- */
+@keyframes folio-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes folio-drop { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes folio-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes folio-pop { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes folio-panel { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes folio-sidebar { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+@keyframes folio-swap { from { opacity: .4; } to { opacity: 1; } }
+@keyframes folio-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Al cambiar de documento el texto aparece con un fundido (main.js activa la clase). */
+:root[data-estetica='folio'] #editor.folio-swap { animation: folio-swap .16s ease-out both; }
+
+/* Cambiar de modo (Lectura/Código), de tema, de aspecto o de estética se hace con un fundido de toda la ventana. */
+:root[data-estetica='folio']::view-transition-old(root),
+:root[data-estetica='folio']::view-transition-new(root) { animation-duration: .28s; animation-timing-function: var(--folio-ease); }
+
+/* Barra fina de progreso de lectura en el borde superior del documento: sin JS, enlazada al scroll. */
+@supports (animation-timeline: scroll()) {
+  :root[data-estetica='folio'] main::before {
+    content: '';
+    position: sticky;
+    top: 0;
+    display: block;
+    height: 2px;
+    margin-bottom: -2px;
+    background: var(--accent);
+    transform-origin: 0 50%;
+    transform: scaleX(0);
+    z-index: 5;
+    animation: folio-progress linear both;
+    animation-timeline: scroll(nearest);
+  }
+  :root[data-estetica='folio'] main.split::before { display: none; }
+}
+
+/* Foco visible con el teclado. */
+:root[data-estetica='folio'] button:focus-visible,
+:root[data-estetica='folio'] input:focus-visible,
+:root[data-estetica='folio'] select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Con «reducir movimiento» no se anima nada (ni la barra de progreso ni los fundidos de ventana). */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-estetica='folio'] *,
+  :root[data-estetica='folio'] *::before,
+  :root[data-estetica='folio'] *::after { animation: none !important; transition: none !important; }
+  :root[data-estetica='folio'] main::before { display: none; }
+  :root[data-estetica='folio']::view-transition-group(*),
+  :root[data-estetica='folio']::view-transition-old(*),
+  :root[data-estetica='folio']::view-transition-new(*) { animation: none !important; }
+}
