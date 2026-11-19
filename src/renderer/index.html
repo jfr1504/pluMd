@@ -43,6 +43,10 @@
         <input id="sb-filter" type="search" placeholder="Filtrar por nombre o escribir una ruta + Intro…" autocomplete="off" />
         <div id="sb-note" class="sb-note" hidden></div>
         <div id="sb-tree" role="tree" hidden></div>
+        <div id="sb-backlinks" hidden>
+          <button type="button" id="bl-head" class="bl-head" aria-expanded="true"><span class="bl-title">Vínculos entrantes</span><span id="bl-count" class="bl-count"></span></button>
+          <div id="bl-list" class="bl-list"></div>
+        </div>
         <div id="sb-empty" class="sb-empty">
           <p class="sb-empty-text"></p>
           <button type="button" id="sb-empty-open" class="primary">Abrir carpeta…</button>

@@ -13,12 +13,16 @@ const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 const { MD_RE, key: norm, within, realPath } = require('./acceso');
+const { enlacesDeDocumento } = require('./wikilinks');
 
 const SKIP_DIRS = new Set(['node_modules', '$recycle.bin', 'system volume information']);
 const INVALID_WINDOWS = /[<>:"/\\|?*\x00-\x1f]/;
 const RESERVED_WINDOWS = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
 const FIXED_DRIVE = 3; // tipos de unidad de Windows: 3 = disco fijo, 4 = red
 const NETWORK_DRIVE = 4;
+const MAX_LINK_FILES = 3000; // documentos que scanLinks revisa como máximo
+const MAX_LINK_DEPTH = 12; // niveles de subcarpetas que recorre scanLinks
+const MAX_LINK_BYTES = 1024 * 1024; // un documento más grande no se revisa en busca de enlaces
 const NETWORK_FS = new Set(['nfs', 'nfs4', 'cifs', 'smb3', 'smbfs', 'sshfs', 'fuse.sshfs',
   'fuse.gvfsd-fuse', 'davfs', 'davfs2', 'fuse.davfs', 'fuse.rclone', '9p', 'ceph', 'fuse.ceph', 'glusterfs', 'fuse.glusterfs']);
 const LOCAL_FS = new Set(['ext2', 'ext3', 'ext4', 'xfs', 'btrfs', 'f2fs', 'zfs', 'vfat', 'exfat',
@@ -26,6 +30,10 @@ const LOCAL_FS = new Set(['ext2', 'ext3', 'ext4', 'xfs', 'btrfs', 'f2fs', 'zfs',
 const MAX_SCAN = 20000; // entradas que se revisan como máximo antes de borrar una carpeta
 const MAX_LIST = 5000; // documentos que devuelve listAll como máximo
 const MAX_DEPTH = 12; // niveles de subcarpetas que recorre listAll
+const MAX_WALK_DIRS = 1500; // carpetas que visita un recorrido completo (listAll) como máximo
+const MAX_WALK_MS = 5000; // tiempo máximo de ese recorrido: en una unidad de red enorme devuelve lo reunido hasta entonces
+const WALK_PARALLEL = 8; // carpetas que el recorrido lee a la vez
+const COLLATOR = new Intl.Collator('es', { numeric: true, sensitivity: 'base' }); // crearlo cuesta: uno solo para todo
 
 // El panel no muestra los nombres que empiezan por punto ni estas carpetas.
 const isHidden = (name) => name.startsWith('.') || SKIP_DIRS.has(name.toLowerCase());
@@ -77,6 +85,39 @@ async function countHiddenFiles(dir, budget = { left: MAX_SCAN }, shown = true) 
   return count;
 }
 
+// Reúne los documentos de la raíz con listDir y con cuatro límites: documentos, profundidad, carpetas visitadas
+// y tiempo. Si se agota alguno devuelve lo reunido hasta ese momento con truncated = true. t0 es el inicio,
+// para que quien lo llame reparta el mismo presupuesto de tiempo con lo que haga después.
+// Recorre por niveles (primero lo más cercano a la raíz, que es lo que importa si se corta) y lee varias
+// carpetas a la vez: en una unidad de red el tiempo se va en esperar a cada lectura, no en procesarla.
+async function walkDocuments(readEntries, rootPath, { limit, depth, maxDirs, maxMs }) {
+  const files = [];
+  const t0 = Date.now();
+  let dirs = 0;
+  let truncated = false;
+  let level = [rootPath];
+  for (let nivel = 0; level.length && !truncated; nivel++) {
+    const next = [];
+    let i = 0;
+    const worker = async () => {
+      while (!truncated && i < level.length) {
+        const dir = level[i++];
+        if (dirs >= maxDirs || Date.now() - t0 >= maxMs) { truncated = true; return; }
+        dirs += 1;
+        for (const e of await readEntries(dir)) {
+          if (files.length >= limit) { truncated = true; return; }
+          if (!e.dir) files.push({ name: e.name, path: e.path, rel: path.relative(rootPath, e.path).replace(/\\/g, '/') });
+          else if (nivel < depth) next.push(e.path);
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(WALK_PARALLEL, level.length) }, worker));
+    level = next;
+  }
+  files.sort((a, b) => COLLATOR.compare(a.rel, b.rel));
+  return { files, truncated, t0 };
+}
+
 function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.promises.unlink(p), platform = process.platform,
   readMounts = () => fs.promises.readFile('/proc/mounts', 'utf8') } = {}) {
   let root = null;
@@ -91,6 +132,34 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
     } catch {
       return false;
     }
+  };
+
+  // Entradas de una carpeta, sin ordenar. NO comprueba la carpeta en sí: quien llama debe haberla validado
+  // (listDir con `contains`) o haberla obtenido de este mismo método, porque una subcarpeta real (no enlace)
+  // de una carpeta de la raíz está dentro de la raíz. Los enlaces y uniones sí se comprueban uno a uno.
+  const readEntries = async (dir) => {
+    const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+    const out = [];
+    for (const e of entries) {
+      if (isHidden(e.name)) continue;
+      const full = path.join(dir, e.name);
+      let isDir = e.isDirectory();
+      let isFile = e.isFile();
+      if (e.isSymbolicLink()) {
+        try {
+          // Un enlace o junction que apunta fuera de la carpeta abierta no se muestra.
+          if (!(await contains(full))) continue;
+          const st = await fs.promises.stat(full);
+          isDir = st.isDirectory();
+          isFile = st.isFile();
+        } catch {
+          continue;
+        }
+      }
+      if (isDir) out.push({ name: e.name, path: full, dir: true });
+      else if (isFile && MD_RE.test(e.name)) out.push({ name: e.name, path: full, dir: false });
+    }
+    return out;
   };
 
   // /proc/mounts escapa espacios, tabuladores, saltos de línea y barras inversas en octal.
@@ -201,46 +270,18 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
 
     async listDir(dir) {
       if (!(await contains(dir))) throw new Error(msg.outside);
-      const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-      const out = [];
-      for (const e of entries) {
-        if (isHidden(e.name)) continue;
-        const full = path.join(dir, e.name);
-        let isDir = e.isDirectory();
-        let isFile = e.isFile();
-        if (e.isSymbolicLink()) {
-          try {
-            // Un enlace o junction que apunta fuera de la carpeta abierta no se muestra.
-            if (!(await contains(full))) continue;
-            const st = await fs.promises.stat(full);
-            isDir = st.isDirectory();
-            isFile = st.isFile();
-          } catch {
-            continue;
-          }
-        }
-        if (isDir) out.push({ name: e.name, path: full, dir: true });
-        else if (isFile && MD_RE.test(e.name)) out.push({ name: e.name, path: full, dir: false });
-      }
-      const collator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
-      out.sort((a, b) => (a.dir === b.dir ? collator.compare(a.name, b.name) : a.dir ? -1 : 1));
+      const out = await readEntries(dir);
+      out.sort((a, b) => (a.dir === b.dir ? COLLATOR.compare(a.name, b.name) : a.dir ? -1 : 1));
       return out;
     },
 
     // Todos los documentos de la carpeta abierta, en cualquier nivel (para el selector rápido).
-    // Reutiliza listDir, así que respeta ocultos y enlaces que salen de la raíz. Acotado en número y profundidad.
-    async listAll({ limit = MAX_LIST, depth = MAX_DEPTH } = {}) {
+    // Reutiliza listDir, así que respeta ocultos y enlaces que salen de la raíz. Acotado en número, profundidad,
+    // carpetas visitadas y tiempo, para que una raíz enorme (una unidad de red) no tarde minutos.
+    async listAll({ limit = MAX_LIST, depth = MAX_DEPTH, maxDirs = MAX_WALK_DIRS, maxMs = MAX_WALK_MS } = {}) {
       if (!root) throw new Error(msg.outside);
-      const files = [];
-      let truncated = false;
-      const walk = async (dir, level) => {
-        for (const e of await this.listDir(dir)) {
-          if (files.length >= limit) { truncated = true; return; }
-          if (!e.dir) files.push({ name: e.name, path: e.path, rel: path.relative(root.path, e.path).replace(/\\/g, '/') });
-          else if (level < depth) await walk(e.path, level + 1);
-        }
-      };
-      await walk(root.path, 0);
+      if (!(await contains(root.path))) throw new Error(msg.outside);
+      const { files, truncated } = await walkDocuments(readEntries, root.path, { limit, depth, maxDirs, maxMs });
       return { files, truncated };
     },
 
@@ -344,6 +385,36 @@ function createFsOps({ trash, driveType = windowsDriveType, unlink = (p) => fs.p
     // para avisar antes de pedir la confirmación; removeDir vuelve a comprobarlo.
     async canRemoveDir(p) {
       return (await dirBlocker(p)) || { ok: true };
+    },
+
+    // Documentos de la carpeta abierta (todos los niveles) y los enlaces [[...]] que contiene cada uno.
+    // Solo lee dentro de la raíz (usa listDir) y con límites: número de documentos, profundidad, carpetas visitadas,
+    // tamaño y tiempo (el mismo presupuesto para recorrer y para leer). Si se agota, devuelve lo reunido con truncated = true.
+    async scanLinks({ limit = MAX_LINK_FILES, depth = MAX_LINK_DEPTH, maxDirs = MAX_WALK_DIRS, maxMs = MAX_WALK_MS } = {}) {
+      if (!root) throw new Error(msg.outside);
+      if (!(await contains(root.path))) throw new Error(msg.outside);
+      const walked = await walkDocuments(readEntries, root.path, { limit, depth, maxDirs, maxMs });
+      const { files, t0 } = walked;
+      let truncated = walked.truncated;
+      // Varios documentos a la vez; el resultado conserva el orden de `files`.
+      const found = new Array(files.length).fill(null);
+      let next = 0;
+      const worker = async () => {
+        while (next < files.length) {
+          const i = next++;
+          if (Date.now() - t0 >= maxMs) { truncated = true; return; }
+          try {
+            const st = await fs.promises.stat(files[i].path);
+            if (st.size > MAX_LINK_BYTES) continue;
+            const list = enlacesDeDocumento(await fs.promises.readFile(files[i].path, 'utf8'));
+            if (list.length) found[i] = { path: files[i].path, links: list.map(({ target, heading, line, text }) => ({ target, heading, line, text })) };
+          } catch {
+            /* un fichero ilegible no impide revisar el resto */
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(WALK_PARALLEL, files.length) }, worker));
+      return { files, links: found.filter(Boolean), truncated };
     },
 
     // Envía una carpeta a la Papelera, para poder recuperarla, si dirBlocker no lo impide.

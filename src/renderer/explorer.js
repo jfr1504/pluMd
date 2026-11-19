@@ -22,7 +22,7 @@ const same = (a, b) => !!a && !!b && (window.api.platform === 'win32'
   ? a.toLowerCase() === b.toLowerCase()
   : a === b);
 
-export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, confirm, notify, onVisibility }) {
+export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, confirm, notify, onVisibility, onRoot }) {
   const $ = (id) => document.getElementById(id);
   const side = $('sidebar');
   const tree = $('sb-tree');
@@ -222,6 +222,7 @@ export function createExplorer({ onOpen, onRenamed, onDeleted, isOpenDirty, conf
     filter.value = '';
     await renderRoot();
     setVisible(true);
+    onRoot?.(root);
     return true;
   }
 
